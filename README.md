@@ -1,1 +1,1 @@
-LotteryContract
+ntf-marketplace
