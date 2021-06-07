@@ -2,7 +2,7 @@
 pragma solidity ^0.8;
 
 
-interface IStable_Swap {
+interface IStableSwap {
 
     /**
     @notice Estimate the final amount received when swapping between `_from` and `_to`
