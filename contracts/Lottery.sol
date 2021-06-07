@@ -3,8 +3,16 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract Lottery is Initializable, ContextUpgradeable {
+  /**
+    @dev Using safe math for all the operations with
+    uint256.
+  **/
+  using SafeMath for uint256; 
+
   /**
     @notice This is the `ticketCost` for each lottery
     the user can change this any time with a function,
@@ -31,6 +39,44 @@ contract Lottery is Initializable, ContextUpgradeable {
     uint256 ticketsBuyed,
     address indexed lendingPool
   );
+
+  /** 
+    @notice This are the enums for the price feeds that what we are working.
+    @dev It's going to be passed as a parameter.
+  **/
+  enum PriceFeed {
+    DAI,
+    LINK,
+    ETH
+  }
+
+  /** 
+    @notice Internal function to check the prices in the oracle.
+    @dev You need to pass the enum as the parameter.
+    @param _priceFeed Is the price feed that we are going to check in the oracle.
+    @param _priceFeedAddress PriceFeedAddress that we are going to check the price.
+    @dev I am dividing by 1e8, because I want to have the price in USD with decimals.
+  **/
+  function _getPriceFeed(PriceFeed _priceFeed, address _priceFeedAddress) internal view returns (uint256 resultPrice){
+    /*
+      We are going to check for the differents price feeds
+      in out contract and get the price of that feed.
+    */
+    if (_priceFeed == PriceFeed.DAI) {
+      (,int price,,,) = AggregatorV3Interface(_priceFeedAddress).latestRoundData();
+      resultPrice = uint256(price).div(1e8);
+    }
+
+    if (_priceFeed == PriceFeed.LINK) {
+      (,int price,,,) = AggregatorV3Interface(_priceFeedAddress).latestRoundData();
+      resultPrice = uint256(price).div(1e8);
+    }
+
+    if (_priceFeed == PriceFeed.ETH) {
+      (,int price,,,) = AggregatorV3Interface(_priceFeedAddress).latestRoundData();
+      resultPrice = uint256(price).div(1e8);
+    }
+  }
   
   /** 
     @dev Initializer of the function, here we will set
