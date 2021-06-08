@@ -34,4 +34,17 @@ describe('Testing: the interface of StableSwap of Curve', () => {
     const sDAI = await iStableSwap.swappable_synth.call(DAI_ADDRESS);
     console.log(sDAI);
   });
+  it('Should make a cross-asset swap', async () => {
+
+    //First we need the sAddress
+    const sDaiAddress = await iStableSwap.swappable_synth.call(DAI_ADDRESS);
+
+    //Expected amount
+    const expected = await iStableSwap.get_swap_into_synth_amount.call(ETH_ADDRESS, sDaiAddress, 10000000)
+    console.log(expected.toNumber(), "im expected")
+
+    //Initiate the swap
+    const tokenId = await iStableSwap.swap_into_synth.call(ETH_ADDRESS, sDaiAddress, expected.toNumber(), 10000000, ADMIN, 0, {from: ADMIN})
+    console.log(tokenId, "imtoken id");
+  })
 });
