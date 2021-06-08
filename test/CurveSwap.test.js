@@ -1,9 +1,7 @@
 const IStableSwap = artifacts.require('IStableSwap');
 const { assert, web3 } = require('hardhat');
 
-//Accounts with funds for transactions.
-// For example: 17th place of the accounts with more ether according to etherscan
-const ADMIN = '0x1b3cb81e51011b549d78bf720b0d924ac763a7c2';
+const ADMIN = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266'; // Using first account of the giving node forked
 
 //Utility Addresses
 const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
@@ -19,12 +17,7 @@ describe('Testing: the interface of StableSwap of Curve', () => {
   let iStableSwap;
 
   before(async () => {
-    await hre.network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [ADMIN],
-    });
-
-    //Get contract instance
+    // Getting the instance of the contract
     iStableSwap = await IStableSwap.at(
       '0x58A3c68e2D3aAf316239c003779F71aCb870Ee47'
     );
@@ -34,17 +27,63 @@ describe('Testing: the interface of StableSwap of Curve', () => {
     const sDAI = await iStableSwap.swappable_synth.call(DAI_ADDRESS);
     console.log(sDAI);
   });
-  it('Should make a cross-asset swap', async () => {
 
+  it('Should make a cross-asset swap', async () => {
     //First we need the sAddress
     const sDaiAddress = await iStableSwap.swappable_synth.call(DAI_ADDRESS);
 
     //Expected amount
-    const expected = await iStableSwap.get_swap_into_synth_amount.call(ETH_ADDRESS, sDaiAddress, 10000000)
-    console.log(expected.toNumber(), "im expected")
+    const expectedInto = await iStableSwap.get_swap_into_synth_amount.call(
+      ETH_ADDRESS,
+      sDaiAddress,
+      toBN(BigInt(5 * 1e18))
+    );
+    console.log(expectedInto.toString(), 'im expected');
 
     //Initiate the swap
-    const tokenId = await iStableSwap.swap_into_synth.call(ETH_ADDRESS, sDaiAddress, expected.toNumber(), 10000000, ADMIN, 0, {from: ADMIN})
-    console.log(tokenId, "imtoken id");
-  })
+    const result = await iStableSwap.swap_into_synth.call(
+      ETH_ADDRESS,
+      sDaiAddress,
+      toBN(BigInt(5 * 1e18)),
+      expectedInto,
+      ADMIN,
+      0,
+      {
+        value: toBN(BigInt(5 * 1e18)),
+      }
+    );
+
+    console.log(result.toString(), 'imtoken id');
+
+    //Initiate the swap
+    await iStableSwap.swap_into_synth(
+      ETH_ADDRESS,
+      sDaiAddress,
+      toBN(BigInt(5 * 1e18)),
+      expectedInto,
+      ADMIN,
+      0,
+      {
+        value: toBN(BigInt(5 * 1e18)),
+      }
+    );
+
+    const expectedFrom = await iStableSwap.get_swap_from_synth_amount.call(
+      sDaiAddress,
+      DAI_ADDRESS,
+      expectedInto
+    );
+
+    const amount = (await iStableSwap.token_info.call(result))[3];
+
+    const resultTx = await iStableSwap.swap_from_synth(
+      result,
+      DAI_ADDRESS,
+      amount,
+      expectedFrom,
+      ADMIN
+    );
+
+    console.log(resultTx);
+  }).timeout(0);
 });

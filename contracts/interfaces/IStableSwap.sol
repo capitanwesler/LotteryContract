@@ -4,6 +4,13 @@ pragma solidity ^0.8;
 
 interface IStableSwap {
 
+  struct TokenInfo {
+    address _owner;
+    address _synth;
+    uint256 _time_to_settle;
+    uint256 _underlying_balance;
+  }
+
     /**
     @notice Estimate the final amount received when swapping between `_from` and `_to`
     @dev Actual received amount may be different if synth rates change during settlement
@@ -71,23 +78,15 @@ interface IStableSwap {
     uint256 _existing_token_id
     ) external payable returns(uint256);
 
-    /**
-    @notice Withdraw the synth represented by an NFT.
-    @dev Callable by the owner or operator of `_token_id` after the synth settlement
-         period has passed. If `_amount` is equal to the entire balance within
-         the NFT, the NFT is burned.
-    @param _token_id The identifier for an NFT
-    @param _amount Amount of the synth to withdraw
-    @param _receiver Address of the recipient of the synth,
-                     if not given defaults to `msg.sender`
-    @return uint256 Synth balance remaining in `_token_id`
-    **/
+  
+    function swap_from_synth(uint256 _token_id, address _to, uint256 _amount, uint256 _expected, address _receiver) external returns (uint256);
 
-    function withdraw(uint256 _token_id,uint256 _amount, address _receiver) external view returns(uint256);
 
     /**
       @notice This is to get the address of the sToken if the address is passed.
       @param _token address of the token for getting it's synthetic counterpart
     **/
     function swappable_synth(address _token) external returns(address);
+
+    function token_info(uint256 _token_id) external returns (TokenInfo memory);
 }
