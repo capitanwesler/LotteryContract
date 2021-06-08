@@ -28,7 +28,6 @@ describe('Testing: the interface of StableSwap of Curve', () => {
     iStableSwap = await IStableSwap.at(
       '0x58A3c68e2D3aAf316239c003779F71aCb870Ee47'
     );
-    console.log(iStableSwap);
   });
 
   it('should get the synthethic address of DAI, sDAI', async () => {
