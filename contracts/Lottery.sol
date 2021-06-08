@@ -21,6 +21,13 @@ contract Lottery is Initializable, ContextUpgradeable {
   **/
   uint256 public ticketCost;
 
+  /**
+    @notice This is `maxTicketsPerPlayer` this can
+    be set by the admin, if he wants to change it
+    and the player can only get this amount of tickets.
+  **/
+  uint256 public maxTicketsPerPlayer;
+
   /** 
     @dev This is a mapping for admins.
     @notice A array of admins will be introduced as a
@@ -59,7 +66,8 @@ contract Lottery is Initializable, ContextUpgradeable {
     of the contract, so we can easily choose who's the
     admin and deploy it with those address.
   **/
-  function initialize(uint256 _ticketCost, address[] memory _listAdmins) public initializer {
+  function initialize(uint256 _ticketCost, address[] memory _listAdmins, uint256 _ticketsPerPlayer) public initializer {
+    maxTicketsPerPlayer = _ticketsPerPlayer;
     ticketCost = _ticketCost;
     for (uint256 i; i < _listAdmins.length; i++) {
       admins[_listAdmins[i]] = true;
