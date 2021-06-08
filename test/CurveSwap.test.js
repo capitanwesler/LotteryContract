@@ -31,7 +31,7 @@ describe('Testing: the interface of StableSwap of Curve', () => {
   });
 
   it('should get the synthethic address of DAI, sDAI', async () => {
-    const sDAI = await iStableSwap.get_s_address(DAI_ADDRESS);
+    const sDAI = await iStableSwap.swappable_synth.call(DAI_ADDRESS);
     console.log(sDAI);
   });
 });
