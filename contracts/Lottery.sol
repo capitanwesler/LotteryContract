@@ -38,6 +38,21 @@ contract Lottery is Initializable, ContextUpgradeable {
     uint256 ticketsBuyed,
     address indexed lendingPool
   );
+
+  /**
+    @notice Defining the price feed, and to see what is the user going
+    to pay.
+    @dev These are our stable coins and ETH.
+  **/
+
+  enum TicketPrice {
+    ETH,
+    DAI,
+    USDC,
+    USDT,
+    TUSD,
+    BUSD
+  }
   
   /** 
     @dev Initializer of the function, here we will set
