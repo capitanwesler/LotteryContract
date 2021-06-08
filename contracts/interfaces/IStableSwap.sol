@@ -88,5 +88,5 @@ interface IStableSwap {
     /**
       @notice This is to get the address of the sToken if the address is passed.
     **/
-    function swappable_synth(address _token) external;
+    function swappable_synth(address _token) external returns(address);
 }

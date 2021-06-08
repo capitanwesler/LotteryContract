@@ -3,16 +3,16 @@
   testing.
  */
 
-const Greeter = artifacts.require("Greeter");
+const Greeter = artifacts.require('Greeter');
 
 async function main() {
-  const greeter = await Greeter.new("Hello, Hardhat!");
+  const greeter = await Greeter.new('Hello, Hardhat!');
   Greeter.setAsDeployed(greeter);
 
-  console.log("Greeter deployed to:", greeter.address);
+  console.log('Greeter deployed to:', greeter.address);
 
   const greeting = await greeter.greet();
-  console.log("Current Greeting:", greeting);
+  console.log('Current Greeting:', greeting);
 }
 
 main()
