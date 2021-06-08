@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./interfaces/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "./RandomNumberConsumer.sol";
 
 contract Lottery is Initializable, ContextUpgradeable {
   /**
