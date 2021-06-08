@@ -85,4 +85,8 @@ interface IStableSwap {
 
     function withdraw(uint256 _token_id,uint256 _amount, address _receiver) external view returns(uint256);
 
+    /**
+      @notice This is to get the address of the sToken if the address is passed.
+    **/
+    function swappable_synth(address _token) external;
 }

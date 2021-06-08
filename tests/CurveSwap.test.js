@@ -7,8 +7,8 @@ const ADMIN = '0x1b3cb81e51011b549d78bf720b0d924ac763a7c2';
 
 //Utility Addresses
 
-const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
-const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f'
+const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';
 //Utility functions
 const toWei = (value, type) => web3.utils.toWei(String(value), type);
 const fromWei = (value, type) =>
@@ -31,8 +31,6 @@ contract('Curve Swap', () => {
     curveSwap = await CurveSwap.new();
   });
   it('Calculate amount returned', async function () {
-
-    console.log(curveSwap)
-    
+    console.log(curveSwap);
   });
 });
