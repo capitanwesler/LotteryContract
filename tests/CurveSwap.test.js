@@ -15,11 +15,9 @@ const fromWei = (value, type) =>
   Number(web3.utils.fromWei(String(value), type));
 const toBN = (value) => web3.utils.toBN(String(value));
 
-let iStableSwap;
-
 describe('Testing: the interface of StableSwap of Curve', () => {
-  //impersonating accounts and deploying
-  //this will give us permissions for using it in our test environment
+  let iStableSwap;
+
   before(async () => {
     await hre.network.provider.request({
       method: 'hardhat_impersonateAccount',
