@@ -17,23 +17,24 @@ const toBN = (value) => web3.utils.toBN(String(value));
 
 let iStableSwap;
 
-//impersonating accounts and deploying
-//this will give us permissions for using it in our test environment
-before(async () => {
-  await hre.network.provider.request({
-    method: 'hardhat_impersonateAccount',
-    params: [ADMIN],
+describe('Testing: the interface of StableSwap of Curve', () => {
+  //impersonating accounts and deploying
+  //this will give us permissions for using it in our test environment
+  before(async () => {
+    await hre.network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [ADMIN],
+    });
+
+    //Get contract instance
+    iStableSwap = await IStableSwap.at(
+      '0x58A3c68e2D3aAf316239c003779F71aCb870Ee47'
+    );
+    console.log(iStableSwap);
   });
 
-  //Get contract instance
-  iStableSwap = await IStableSwap.at(
-    '0x58A3c68e2D3aAf316239c003779F71aCb870Ee47'
-  );
-  console.log(iStableSwap);
-});
-
-describe('Testing the Curve Swap', () => {
-  it('Calculate amount returned', async function () {
-    console.log(await iStableSwap.get_s_address(DAI_ADDRESS));
+  it('should get the synthethic address of DAI, sDAI', async () => {
+    const sDAI = await iStableSwap.get_s_address(DAI_ADDRESS);
+    console.log(sDAI);
   });
 });
