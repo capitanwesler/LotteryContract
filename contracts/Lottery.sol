@@ -314,6 +314,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
 
       supplyTickets = supplyTicketsRunning;
       supplyTicketsRunning = 2**256 - 1;
+    } else {
+      supplyTickets = 2**256 - 1;
     }
 
     statusLottery = LotteryStatus.OPEN;
