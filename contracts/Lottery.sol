@@ -25,7 +25,7 @@ contract Lottery is Initializable, ContextUpgradeable {
   /**
     @notice This is the counter for the tickets that we can sell.
   **/
-  uint256 public supplyTickets;
+  uint256 public supplyTickets = 2**256 - 1;
 
   /**
     @notice This is `maxTicketsPerPlayer` this can
@@ -72,7 +72,14 @@ contract Lottery is Initializable, ContextUpgradeable {
     of the contract, so we can easily choose who's the
     admin and deploy it with those address.
   **/
-  function initialize(uint256 _ticketCost, address[] memory _listAdmins, uint256 _ticketsPerPlayer) public initializer {
+  function initialize(
+      uint256 _ticketCost, 
+      address[] memory _listAdmins, 
+      uint256 _ticketsPerPlayer
+    )
+      public 
+      initializer
+    {
     maxTicketsPerPlayer = _ticketsPerPlayer;
     ticketCost = _ticketCost;
     for (uint256 i; i < _listAdmins.length; i++) {
@@ -124,6 +131,10 @@ contract Lottery is Initializable, ContextUpgradeable {
     require(
         aggregators[_tokenPayment] != address(0),
         "Aggregator: ZERO_ADDRESS"
+    );
+    require(
+      aggregators[_tokenPayment] != aggregators[_tokenPayment], 
+      "Aggregator: CALLING_STABLE_COIN"
     );
     (,int256 price,,,) = AggregatorV3Interface(aggregators[_tokenPayment]).latestRoundData();
 

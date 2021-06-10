@@ -18,14 +18,14 @@ contract RandomNumberConsumer is VRFConsumerBase {
      * Constructor inherits VRFConsumerBase
      * 
      * Network: ForkedMainnet
-     * Chainlink VRF Coordinator address: /? Set the deployed address for the VRFCoordinatorMock ?/
+     * Chainlink VRF Coordinator address: /? 0xf0d54349aDdcf704F77AE15b96510dEA15cb7952 ?/
      * LINK token address:                0x514910771af9ca656af840dff83e8264ecf986ca
      * Key Hash: 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4
      */
     constructor() 
         VRFConsumerBase(
-            0x5FC8d32690cc91D4c39d9d3abcBD16989F875707, // VRF Coordinator
-            0xa36085F69e2889c224210F603D836748e7dC0088  // LINK Token
+            0xf0d54349aDdcf704F77AE15b96510dEA15cb7952, // VRF Coordinator
+            0x514910771AF9Ca656af840dff83E8264EcF986CA  // LINK Token
         )
     {
         keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
