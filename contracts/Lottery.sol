@@ -19,6 +19,11 @@ contract Lottery is Initializable, ContextUpgradeable {
   **/
   uint256 public ticketCost;
 
+  /**
+    @notice This is the counter for the tickets that we can sell.
+  **/
+  uint256 public supplyTickets;
+
   /** 
     @dev This is a mapping for admins.
     @notice A array of admins will be introduced as a
