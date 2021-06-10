@@ -36,12 +36,9 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
   uint256 public maxTicketsPerPlayer;
 
   /** 
-    @dev This is a mapping for admins.
-    @notice A array of admins will be introduced as a
-    parameter on the initializer to stablish the admins
-    of the contract.
+    @dev This is address of the admin of the contract.
   **/
-  mapping(address => bool) public admins;
+  address public admin;
 
   /**
     @dev This is the mapping of aggregators. 
@@ -85,6 +82,10 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
 
   LotteryStatus public statusLottery;
 
+  event StatusOfLottery (
+    LotteryStatus lottery
+  );
+
 
   /** 
     @notice Event for each person who enters in the lottery.
@@ -115,7 +116,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
   **/
   function initialize(
       uint256 _ticketCost, 
-      address[] memory _listAdmins, 
+      address _admin, 
       uint256 _ticketsPerPlayer
     )
       public 
@@ -123,16 +124,14 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
     {
     maxTicketsPerPlayer = _ticketsPerPlayer;
     ticketCost = _ticketCost;
-    for (uint256 i; i < _listAdmins.length; i++) {
-      admins[_listAdmins[i]] = true;
-    }
+    admin = _admin;
   }
 
   /** 
     @dev Modifier, to check if either the actual user is an admin or not.
   **/
   modifier onlyAdmin() {
-    require(admins[_msgSender()], "Admin: NOT_ADMIN");
+    require(admin == _msgSender(), "Admin: NOT_ADMIN");
     _;
   }
 
@@ -268,6 +267,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
     */
 
     statusLottery = LotteryStatus.CLOSE;
+    emit StatusOfLottery(statusLottery);
   }
 
 
@@ -277,7 +277,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
     of the interest in the pools.
   **/
 
-  function chooseWinner(uint256 _randomNumber) external /* Add modifier who should call */ returns (address) {
+  function chooseWinner(uint256 _randomNumber) external /* Add modifier who should call */ {
     /*
       Get the interests for that user from the
       pool that we had the lottery.
@@ -311,5 +311,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
     playersRunningCount = 0;
 
     statusLottery = LotteryStatus.OPEN;
+    emit StatusOfLottery(statusLottery);
   }
 }
