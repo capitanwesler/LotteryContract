@@ -27,6 +27,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
     @notice This is the counter for the tickets that we can sell.
   **/
   uint256 public supplyTickets = 2**256 - 1;
+  uint256 public supplyTicketsRunning = 2**256 - 1;
 
   /**
     @notice This is `maxTicketsPerPlayer` this can
@@ -245,8 +246,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
       );
 
       playersRunning[playersRunningCount].owner = _msgSender();
-      playersRunning[playersRunningCount].initialBuy = supplyTickets;
-      playersRunning[playersRunningCount].endBuy = supplyTickets - _quantityOfTickets;
+      playersRunning[playersRunningCount].initialBuy = supplyTicketsRunning;
+      playersRunning[playersRunningCount].endBuy = supplyTicketsRunning - _quantityOfTickets;
       playersRunning[playersRunningCount].quantityTickets = _quantityOfTickets;
       playersRunningCount++;
 
@@ -302,13 +303,18 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
 
     playersCount = 0;
 
-    for (uint256 i = 0; i < playersRunningCount; i++) {
-      players[i] = playersRunning[i];
-      delete playersRunning[i];
-      playersCount++;
-    }
+    if (playersRunningCount > 0) {
+      for (uint256 i = 0; i < playersRunningCount; i++) {
+        players[i] = playersRunning[i];
+        delete playersRunning[i];
+        playersCount++;
+      }
 
-    playersRunningCount = 0;
+      playersRunningCount = 0;
+
+      supplyTickets = supplyTicketsRunning;
+      supplyTicketsRunning = 2**256 - 1;
+    }
 
     statusLottery = LotteryStatus.OPEN;
     emit StatusOfLottery(statusLottery);
