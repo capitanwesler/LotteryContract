@@ -4,11 +4,12 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@chainlink/contracts/src/v0.8/dev/ChainlinkClient.sol";
 import "./interfaces/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./RandomNumberConsumer.sol";
 
-contract Lottery is Initializable, ContextUpgradeable {
+contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
   /**
     @dev Using safe math for all the operations with
     uint256.
@@ -147,7 +148,7 @@ contract Lottery is Initializable, ContextUpgradeable {
   **/
 
   function chooseWinner(uint256 _randomNumber) external onlyAdmin returns (uint) {
-    
+
 
     /*
       Get the interests for that user from the
