@@ -55,7 +55,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
 
   /** 
     @dev This will be the mapping of the lottery players.
-    @notice We have a struct for the Player, so we canm
+    @notice We have a struct for the Player, so we can
     store where the player bought the tickets and when
     the end of the bought.
   **/
@@ -69,10 +69,21 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
 
   mapping(uint256 => Player) public players;
 
+  mapping(uint256 => Player) public playersRunning;
+
   /** 
     @dev Counter of players.
   **/
   uint256 public playersCount;
+
+  uint256 public playersRunningCount;
+
+  /**
+    @dev This is to check when a lottery is already running.
+  **/
+  enum LotteryStatus {CLOSE, RECOLLECTING, PICKING_WINNER}
+
+  LotteryStatus public statusLottery;
 
 
   /** 
@@ -210,19 +221,37 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
       not a stable coin, and we need to get the price.
     */
     
-    IERC20(_payment).transferFrom(
-      _msgSender(), 
-      address(this), 
-      (_quantityOfTickets * ticketCost).div(_getPriceByToken(_payment))
-    );
+    if (statusLottery == LotteryStatus.RECOLLECTING) {
+      IERC20(_payment).transferFrom(
+        _msgSender(), 
+        address(this), 
+        (_quantityOfTickets * ticketCost).div(_getPriceByToken(_payment))
+      );
 
-    players[playersCount].owner = _msgSender();
-    players[playersCount].initialBuy = supplyTickets;
-    players[playersCount].endBuy = supplyTickets - _quantityOfTickets;
-    players[playersCount].quantityTickets = _quantityOfTickets;
-    playersCount++;
+      players[playersCount].owner = _msgSender();
+      players[playersCount].initialBuy = supplyTickets;
+      players[playersCount].endBuy = supplyTickets - _quantityOfTickets;
+      players[playersCount].quantityTickets = _quantityOfTickets;
+      playersCount++;
 
-    emit LotteryEnter(_msgSender(), _quantityOfTickets, address(0));
+      emit LotteryEnter(_msgSender(), _quantityOfTickets, address(0));
+    }
+
+    if (statusLottery == LotteryStatus.CLOSE) {
+      IERC20(_payment).transferFrom(
+        _msgSender(), 
+        address(this), 
+        (_quantityOfTickets * ticketCost).div(_getPriceByToken(_payment))
+      );
+
+      playersRunning[playersRunningCount].owner = _msgSender();
+      playersRunning[playersRunningCount].initialBuy = supplyTickets;
+      playersRunning[playersRunningCount].endBuy = supplyTickets - _quantityOfTickets;
+      playersRunning[playersRunningCount].quantityTickets = _quantityOfTickets;
+      playersRunningCount++;
+
+      emit LotteryEnter(_msgSender(), _quantityOfTickets, address(0));
+    }
   }
 
   /**
@@ -252,7 +281,18 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
 
     for (uint256 i = 0; i < playersCount; i++) {
       delete players[i];
-      playersCount = 0;
     }
+
+    playersCount = 0;
+
+    for (uint256 i = 0; i < playersRunningCount; i++) {
+      players[i] = playersRunning[i];
+      delete playersRunning[i];
+      playersCount++;
+    }
+
+    playersRunningCount = 0;
+
+    
   }
 }
