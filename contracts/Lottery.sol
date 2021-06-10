@@ -81,7 +81,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
   /**
     @dev This is to check when a lottery is already running.
   **/
-  enum LotteryStatus {CLOSE, RECOLLECTING, PICKING_WINNER}
+  enum LotteryStatus {CLOSE, OPEN}
 
   LotteryStatus public statusLottery;
 
@@ -221,7 +221,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
       not a stable coin, and we need to get the price.
     */
     
-    if (statusLottery == LotteryStatus.RECOLLECTING) {
+    if (statusLottery == LotteryStatus.OPEN) {
       IERC20(_payment).transferFrom(
         _msgSender(), 
         address(this), 
@@ -255,12 +255,29 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
   }
 
   /**
+    @dev This is the function to send the tokens to the
+    pool of AAVE or COMPUND to earn interest.
+  **/
+
+  function sendTokensToPool() external /* Add modifier who should call */ {
+    /*
+      -->
+      Add the logic to send all the tokens
+      of one asset to a specific pool of that
+      asset either in COMPUND pools or AAVE pools.
+    */
+
+    statusLottery = LotteryStatus.CLOSE;
+  }
+
+
+  /**
     @param _randomNumber This is the randomNumber as a parameter to choose the winner.
     @dev This function is going to be shot, after five days to choose the winner
     of the interest in the pools.
   **/
 
-  function chooseWinner(uint256 _randomNumber) external returns (address) {
+  function chooseWinner(uint256 _randomNumber) external /* Add modifier who should call */ returns (address) {
     /*
       Get the interests for that user from the
       pool that we had the lottery.
@@ -293,6 +310,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
 
     playersRunningCount = 0;
 
-    
+    statusLottery = LotteryStatus.OPEN;
   }
 }
