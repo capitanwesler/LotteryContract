@@ -188,7 +188,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
     @param _payment The token that the users want to pay, this can be
     an stable coin or either an ERC20 Token (DAI, LINK).
   **/
-  function buyTickets(address _payment, uint256 _quantityOfTickets) external returns (uint256) {
+  function buyTickets(address _payment, uint256 _quantityOfTickets) external {
     require(_payment != address(0), "buyTickets: ZERO_ADDRESS");
     require(
       _getPriceByToken(_payment) * IERC20(_payment).balanceOf(_msgSender()) 
