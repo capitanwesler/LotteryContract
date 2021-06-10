@@ -23,6 +23,11 @@ contract Lottery is Initializable, ContextUpgradeable {
   uint256 public ticketCost;
 
   /**
+    @notice This is the counter for the tickets that we can sell.
+  **/
+  uint256 public supplyTickets;
+
+  /**
     @notice This is `maxTicketsPerPlayer` this can
     be set by the admin, if he wants to change it
     and the player can only get this amount of tickets.
