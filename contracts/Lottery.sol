@@ -53,6 +53,27 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
   **/
   mapping(address => address) internal aggregators;
 
+  /** 
+    @dev This will be the mapping of the lottery players.
+    @notice We have a struct for the Player, so we canm
+    store where the player bought the tickets and when
+    the end of the bought.
+  **/
+
+  struct Player {
+    address owner;
+    uint256 initialBuy;
+    uint256 endBuy;
+    uint256 quantityTickets;
+  }
+
+  mapping(uint256 => Player) public players;
+
+  /** 
+    @dev Counter of players.
+  **/
+  uint256 public playersCount;
+
 
   /** 
     @notice Event for each person who enters in the lottery.
@@ -60,9 +81,17 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
     and we can see who buyed for a specific pool.
   **/
   event LotteryEnter (
-    address person,
+    address indexed person,
     uint256 ticketsBuyed,
     address indexed lendingPool
+  );
+
+  /** 
+    @notice Event that shot when a winner is chosen.
+  **/
+  event Winner(
+    address indexed person,
+    uint256 ticketWinner
   );
   
   /** 
@@ -97,6 +126,28 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
   }
 
   /**
+    @dev Returns the price of a token in USD.
+    @param _tokenPayment Address of the ERC-20 Token.
+  */
+  function _getPriceByToken(address _tokenPayment)
+    internal
+    view
+    returns (uint256)
+  {
+    require(
+        aggregators[_tokenPayment] != address(0),
+        "Aggregator: ZERO_ADDRESS"
+    );
+    
+    if (_tokenPayment != aggregators[_tokenPayment]) {
+      (,int256 price,,,) = AggregatorV3Interface(aggregators[_tokenPayment]).latestRoundData();
+      return uint256(price);
+    }
+
+    return 1;
+  }
+
+  /**
     @dev Setting the ticketCost can only be done by an admin.
     @notice This is for changing the price of the ticket,
     if we want to change the price of the tickets after a
@@ -120,39 +171,88 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
     aggregators[_token] = _aggregator;
   }
 
+  
   /**
-    @dev Returns the price of a token in USD.
-    @param _tokenPayment Address of the ERC-20 Token.
-  */
-  function _getPriceByToken(address _tokenPayment)
-    internal
-    view
-    returns (uint256)
-  {
-    require(
-        aggregators[_tokenPayment] != address(0),
-        "Aggregator: ZERO_ADDRESS"
-    );
-    require(
-      aggregators[_tokenPayment] != aggregators[_tokenPayment], 
-      "Aggregator: CALLING_STABLE_COIN"
-    );
-    (,int256 price,,,) = AggregatorV3Interface(aggregators[_tokenPayment]).latestRoundData();
+    @dev Function to remove the aggregators.
+    @param _token This is the token what we want to delete from the aggregators.
+  **/
 
-    return uint256(price);
+  function _removeAggregator(address _token) external onlyAdmin {
+    require(_token != address(0), "Aggregator: ZERO_ADDRESS");
+    delete aggregators[_token];
+  }
+
+  /** 
+    @dev buyTickets function, this will buy the tickets that the
+    user desire.
+    @param _payment The token that the users want to pay, this can be
+    an stable coin or either an ERC20 Token (DAI, LINK).
+  **/
+  function buyTickets(address _payment, uint256 _quantityOfTickets) external returns (uint256) {
+    require(_payment != address(0), "buyTickets: ZERO_ADDRESS");
+    require(
+      _getPriceByToken(_payment) * IERC20(_payment).balanceOf(_msgSender()) 
+      >= 
+      _quantityOfTickets * ticketCost,
+      "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
+    );
+
+    /*
+      -->
+      We need to implement the swap
+      to the pool token, that we are
+      handling this week.
+    */
+
+
+    /*
+      This means that the _payment address is
+      not a stable coin, and we need to get the price.
+    */
+    
+    IERC20(_payment).transferFrom(
+      _msgSender(), 
+      address(this), 
+      (_quantityOfTickets * ticketCost).div(_getPriceByToken(_payment))
+    );
+
+    players[playersCount].owner = _msgSender();
+    players[playersCount].initialBuy = supplyTickets;
+    players[playersCount].endBuy = supplyTickets - _quantityOfTickets;
+    players[playersCount].quantityTickets = _quantityOfTickets;
+    playersCount++;
+
+    emit LotteryEnter(_msgSender(), _quantityOfTickets, address(0));
   }
 
   /**
     @param _randomNumber This is the randomNumber as a parameter to choose the winner.
-    @dev This function is going to be shot after the alarmclock.
+    @dev This function is going to be shot, after five days to choose the winner
+    of the interest in the pools.
   **/
 
-  function chooseWinner(uint256 _randomNumber) external onlyAdmin returns (uint) {
-
-
+  function chooseWinner(uint256 _randomNumber) external returns (address) {
     /*
       Get the interests for that user from the
       pool that we had the lottery.
     */
+
+    for (uint256 i = 0; i < playersCount; i++) {
+      if (_randomNumber >= players[i].initialBuy && _randomNumber <= players[i].endBuy) {
+        /*
+          -->
+          Logic for earning the interest to this
+          address and giving the admin 5% of fee.
+        */
+
+        emit Winner(players[i].owner, _randomNumber);
+        return players[i].owner;
+      }
+    }
+
+    for (uint256 i = 0; i < playersCount; i++) {
+      delete players[i];
+      playersCount = 0;
+    }
   }
 }

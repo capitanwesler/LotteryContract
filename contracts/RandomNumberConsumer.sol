@@ -33,7 +33,6 @@ contract RandomNumberConsumer is VRFConsumerBase {
             0x851356ae760d987E095750cCeb3bC6014560891C, // VRF Coordinator
             0x514910771AF9Ca656af840dff83E8264EcF986CA  // LINK Token
         )
-        public 
     {
         keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
         fee = 0.1 * 10 ** 18; // 0.1 LINK (Varies by network)
