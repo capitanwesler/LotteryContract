@@ -206,6 +206,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
       _quantityOfTickets * ticketCost,
       "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
     );
+    require(_quantityOfTickets <= maxTicketsPerPlayer, "buyTickets: EXCEED_MAX_TICKETS");
 
     /*
       -->
