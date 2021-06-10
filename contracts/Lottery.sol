@@ -292,7 +292,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
         */
 
         emit Winner(players[i].owner, _randomNumber);
-        return players[i].owner;
       }
     }
 
