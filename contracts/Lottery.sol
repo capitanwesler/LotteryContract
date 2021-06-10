@@ -140,4 +140,18 @@ contract Lottery is Initializable, ContextUpgradeable {
 
     return uint256(price);
   }
+
+  /**
+    @param _randomNumber This is the randomNumber as a parameter to choose the winner.
+    @dev This function is going to be shot after the alarmclock.
+  **/
+
+  function chooseWinner(uint256 _randomNumber) external onlyAdmin returns (uint) {
+    
+
+    /*
+      Get the interests for that user from the
+      pool that we had the lottery.
+    */
+  }
 }

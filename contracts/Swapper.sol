@@ -13,7 +13,7 @@ contract Swapper {
     admin = _admin;
   }
 
-  function swapEthForTokens(address[] memory _tokens, uint256[] memory _porcents) external payable {
+  function swapEthForTokens(address[] calldata _tokens, uint256[] calldata _porcents) external payable {
     /*
       The value in wei, needs to be greater than 1.
     */
