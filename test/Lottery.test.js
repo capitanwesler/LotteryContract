@@ -5,6 +5,7 @@ let randomNumber;
 let VRFcoordinator;
 let LINKtoken;
 let lottery;
+let alarmClock;
 
 const LINK = '0x514910771AF9Ca656af840dff83E8264EcF986CA';
 
@@ -18,8 +19,9 @@ describe('Testing: Lottery Contract', async () => {
       'RandomNumberConsumer'
     );
     const Lottery = await ethers.getContractFactory('Lottery');
+    const MockOracle = await ethers.getContractFactory('MockOracle');
 
-    // - Getting the accounts on web3:
+    // - Getting the accounts on ethers:
     accounts = await ethers.getSigners();
 
     // - VRFCoordinatorMock:
@@ -52,6 +54,10 @@ describe('Testing: Lottery Contract', async () => {
       randomNumber.address,
     ]);
     await lottery.deployed();
+
+    // - MockOracle for the AlarmClock:
+    alarmClock = MockOracle.deploy();
+    await alarmClock.deployed();
   });
 
   it('should get the randomResult number from the contract consumer', async () => {
@@ -78,4 +84,8 @@ describe('Testing: Lottery Contract', async () => {
       (await lottery.getRandomNumber()).toString()
     );
   });
+
+  // it ('should shot a determinate function when the clock is done', async () => {
+  //   const
+  // });
 });

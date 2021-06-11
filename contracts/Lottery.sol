@@ -146,12 +146,14 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       public 
       initializer
     {
+    setPublicChainlinkToken();
     maxTicketsPerPlayer = _ticketsPerPlayer;
     ticketCost = _ticketCost;
     admin = _admin;
     randomNumberConsumer = _randomNumberConsumer;
     supplyTickets = 2**256 - 1;
     supplyTicketsRunning = 2**256 - 1;
+    statusLottery = LotteryStatus.OPEN;
   }
 
   /** 
@@ -282,11 +284,23 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   }
 
   /**
-    @dev This is the function to send the tokens to the
-    pool of AAVE or COMPUND to earn interest.
+    @dev This is the function to send the tokens
+    and when is pass the 2 days, it will fullfill
+    to transfers the tokens to the a specific pool.
   **/
 
-  function sendTokensToPool() external /* Add modifier who should call */ {
+  function sendTokensToPool(address _oracleAddress) external /* Add modifier who should call */ {
+    require(statusLottery == LotteryStatus.OPEN, "sendTokensToPool: LOTTERY_NEED_TO_BE_OPEN");
+    Chainlink.Request memory req = buildChainlinkRequest("0be1216ae9344e7b8e81539939b5ac64", address(this), this.fulfill_tokens.selector);
+    req.addUint("until", block.timestamp + 172800);
+    sendChainlinkRequestTo(_oracleAddress, req, 1 * 1e18);
+  }
+
+  /** 
+    @dev This functions will fullfill when the timer is done.
+  **/
+
+  function fulfill_tokens() external {
     /*
       -->
       Add the logic to send all the tokens
@@ -296,6 +310,12 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
     statusLottery = LotteryStatus.CLOSE;
     emit StatusOfLottery(statusLottery);
+
+    /*
+      -->
+      After this we can add another delay to choose the winner
+      and maybe generate the random number in the VRF.
+    */
   }
 
   /** 
