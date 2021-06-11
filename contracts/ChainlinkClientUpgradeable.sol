@@ -3,13 +3,14 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@chainlink/contracts/src/v0.8/dev/Chainlink.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/ENSInterface.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/ChainlinkRequestInterface.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/PointerInterface.sol";
 import { ENSResolver as ENSResolver_Chainlink } from "@chainlink/contracts/src/v0.8/vendor/ENSResolver.sol";
 
-contract ChainlinkClientUpgradeable is Initializable {
+contract ChainlinkClientUpgradeable is Initializable, ContextUpgradeable {
   using Chainlink for Chainlink.Request;
 
   uint256 constant internal LINK_DIVISIBILITY = 10**18;
@@ -37,11 +38,13 @@ contract ChainlinkClientUpgradeable is Initializable {
     bytes32 indexed id
   );
 
-  function initialize()
-      public 
-      initializer
-    {
-    requestCount = 1;
+  function __ChainlinkClient_init() internal initializer {
+    __Context_init_unchained();
+    __ChainlinkClient_init_unchained();
+  }
+
+  function __ChainlinkClient_init_unchained() internal initializer {
+      requestCount = 1;
   }
 
   /**

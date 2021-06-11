@@ -71,6 +71,12 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   mapping(uint256 => Player) public playersRunning;
 
   /** 
+    @dev RandomNumber.
+  **/
+
+  uint256 private randomNumber;
+
+  /** 
     @dev Counter of players.
   **/
   uint256 public playersCount;
@@ -104,6 +110,15 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     address indexed person,
     uint256 ticketsBuyed,
     address indexed lendingPool
+  );
+
+  /**
+    @dev Event to register the requestId of the randomNumber.
+  **/
+
+  event RandomNumber (
+    bytes32 requestId,
+    uint256 userProvidedSeed
   );
 
   /** 
@@ -286,8 +301,24 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   /** 
     @dev This can be called to get the randomNumber.
   **/
-  function _getRandomNumber() external onlyAdmin {
-    RandomNumberConsumer(randomNumberConsumer).getRandomNumber(554321);
+  function _getRandomNumber(uint256 _seed) external onlyAdmin {
+    bytes32 requestId = RandomNumberConsumer(randomNumberConsumer).getRandomNumber(_seed);
+    emit RandomNumber(requestId, _seed);
+  }
+
+  /** 
+    @dev Set the randomNumber.
+  **/
+  function _setRandomNumber() external onlyAdmin {
+    randomNumber = RandomNumberConsumer(randomNumberConsumer).randomResult();
+  }
+
+  
+  /** 
+    @dev Get the randomNumber.
+  **/
+  function getRandomNumber() external view onlyAdmin returns(uint256) {
+    return randomNumber;
   }
 
 
@@ -298,12 +329,18 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
   function chooseWinner() external returns(bool) /* Add modifier who should call */ {
     /*
+      -->
       Get the interests for that user from the
       pool that we had the lottery.
     */
 
+    /*
+      -->
+      We set the randomNumber, when the winner is going to be choose.
+    */
+
     for (uint256 i = 0; i < playersCount; i++) {
-      if (RandomNumberConsumer(randomNumberConsumer).randomResult() >= players[i].initialBuy && RandomNumberConsumer(randomNumberConsumer).randomResult() <= players[i].endBuy) {
+      if (randomNumber >= players[i].initialBuy && randomNumber <= players[i].endBuy) {
         /*
           -->
           Logic for earning the interest to this

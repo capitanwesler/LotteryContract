@@ -1,7 +1,4 @@
-const { web3 } = require('hardhat');
-const assert = require('assert');
-const Swapper = artifacts.require('Swapper');
-const IERC20 = artifacts.require('IERC20');
+const { ethers } = require('hardhat');
 
 let swapper;
 let DAItoken;
@@ -16,16 +13,19 @@ before(async () => {
   const DAI = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
   const LINK = '0x514910771AF9Ca656af840dff83E8264EcF986CA';
 
-  const accounts = await web3.eth.getAccounts();
+  // - Getting the factories for the contracts:
+  const Swapper = await ethers.getContractFactory('Swapper');
 
-  swapper = await Swapper.new(accounts[0]);
-  Swapper.setAsDeployed(swapper);
+  const accounts = await ethers.getSigners();
+
+  swapper = await Swapper.deploy(accounts[0].address);
+  await swapper.deployed();
 
   // DAI TOKEN
-  DAItoken = await IERC20.at(DAI);
+  DAItoken = await ethers.getContractAt('IERC20', DAI);
 
   // LINK TOKEN
-  LINKtoken = await IERC20.at(LINK);
+  LINKtoken = await ethers.getContractAt('IERC20', LINK);
 });
 
 describe('Swapping ETH for Tokens', () => {
@@ -37,7 +37,7 @@ describe('Swapping ETH for Tokens', () => {
     ];
 
     await swapper.swapEthForTokens(tokens, porcents, {
-      value: web3.utils.toWei('5', 'ether'),
+      value: ethers.utils.parseEther('5'),
     });
   });
 });

@@ -9,21 +9,7 @@ contract RandomNumberConsumer is VRFConsumerBase {
     uint256 internal fee;
     
     uint256 public randomResult;
-
-    event RandomNumber (
-      bytes32 requestId,
-      uint256 userProvidedSeed
-    );
     
-    /**
-     * Constructor inherits VRFConsumerBase
-     * 
-     * Network: ForkedMainnet
-     * Chainlink VRF Coordinator address: /? 0x851356ae760d987E095750cCeb3bC6014560891C ?/
-     * LINK token address:                0x514910771af9ca656af840dff83e8264ecf986ca
-     * Key Hash: 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4
-     * Fee: 
-     */
     constructor(address _vrfCoordinator, address _link, bytes32 _keyHash)
       VRFConsumerBase(_vrfCoordinator, _link)
     {
@@ -37,8 +23,6 @@ contract RandomNumberConsumer is VRFConsumerBase {
     function getRandomNumber(uint256 userProvidedSeed) public returns (bytes32) {
         require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK - fill contract with faucet");
         bytes32 requestId = requestRandomness(keyHash, fee, userProvidedSeed);
-
-        emit RandomNumber(requestId, userProvidedSeed);
         return requestId;
     }
 
