@@ -1,4 +1,5 @@
 const { upgrades, ethers } = require('hardhat');
+const assert = require('assert');
 
 let accounts;
 let randomNumber;
@@ -15,6 +16,10 @@ describe('Testing: Lottery Contract', async () => {
     const VRFCoordinator = await ethers.getContractFactory(
       'VRFCoordinatorMock'
     );
+
+    // - IERC20 of LINK:
+    LINKtoken = await ethers.getContractAt('IERC20', LINK);
+
     const RandomNumber = await ethers.getContractFactory(
       'RandomNumberConsumer'
     );
@@ -26,7 +31,7 @@ describe('Testing: Lottery Contract', async () => {
 
     // - VRFCoordinatorMock:
     VRFcoordinator = await VRFCoordinator.deploy(
-      '0x514910771af9ca656af840dff83e8264ecf986ca'
+      '0x514910771AF9Ca656af840dff83E8264EcF986CA'
     );
     await VRFcoordinator.deployed();
 
@@ -38,9 +43,6 @@ describe('Testing: Lottery Contract', async () => {
     );
     await randomNumber.deployed();
 
-    // - IERC20 of LINK:
-    LINKtoken = await ethers.getContractAt('IERC20', LINK);
-
     await LINKtoken.transfer(
       randomNumber.address,
       ethers.utils.parseEther('5')
@@ -49,6 +51,8 @@ describe('Testing: Lottery Contract', async () => {
     // - MockOracle for the AlarmClock:
     alarmClock = await MockOracle.deploy(LINK);
     await alarmClock.deployed();
+
+    await LINKtoken.transfer(alarmClock.address, ethers.utils.parseEther('5'));
 
     // - Lottery:
     lottery = await upgrades.deployProxy(Lottery, [
@@ -60,32 +64,37 @@ describe('Testing: Lottery Contract', async () => {
       45665,
     ]);
     await lottery.deployed();
+
+    await LINKtoken.transfer(lottery.address, ethers.utils.parseEther('5'));
   });
 
   it('should get the randomResult number from the contract consumer', async () => {
     const tx = await lottery.sendTokensToPool();
-    const receipt = await tx.wait();
 
-    console.log(receipt);
-    // const requestId = receipt.events[3].args.requestId;
-    // const random = Math.floor(Math.random() * 100000);
+    const requestId = (await tx.wait()).events[0].args.id;
+    const random = Math.floor(Math.random() * 100000);
 
-    // /*
-    //   This is the VRFCoordinator that simulates the
-    //   node calling the callback function.
-    // */
-    // await VRFcoordinator.callBackWithRandomness(
-    //   requestId,
-    //   ethers.utils.parseUnits(String(random), 18),
-    //   randomNumber.address
-    // );
+    console.log(
+      'Random Number: >> ',
+      (await lottery.getRandomNumber()).toString()
+    );
+    assert.strictEqual((await lottery.getRandomNumber()).toString(), '0');
 
-    // await lottery._setRandomNumber();
+    /*
+      This is the VRFCoordinator that simulates the
+      node calling the callback function.
+    */
+    await VRFcoordinator.callBackWithRandomness(
+      requestId,
+      ethers.utils.parseUnits(String(random), 18),
+      randomNumber.address
+    );
 
-    // console.log(
-    //   'Random Number: >> ',
-    //   (await lottery.getRandomNumber()).toString()
-    // );
+    console.log(
+      'Random Number: >> ',
+      (await lottery.getRandomNumber()).toString()
+    );
+    assert.notStrictEqual((await lottery.getRandomNumber()).toString(), '0');
   });
 
   // it ('should shot a determinate function when the clock is done', async () => {

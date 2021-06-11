@@ -334,18 +334,12 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       pool that we had the lottery.
     */
 
-    /*
-      -->
-      We set the randomNumber, when the winner is going to be choose.
-    */
-
     for (uint256 i = 0; i < playersCount; i++) {
       if (randomNumber >= players[i].initialBuy && randomNumber <= players[i].endBuy) {
         /*
           -->
           Logic for earning the interest to this
-          address and giving the admin 5% of fee,
-          and generating the randomNumber.
+          address and giving the admin 5% of fee.
         */
 
         emit Winner(players[i].owner, RandomNumberConsumer(randomNumberConsumer).randomResult());
@@ -374,7 +368,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     }
 
     statusLottery = LotteryStatus.OPEN;
-    emit StatusOfLottery(statusLottery);
+    emit StatusOfLottery(statusLottery);  
   }
 
   /**
@@ -391,15 +385,14 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       this.fulfill_tokens.selector
     );
     req.addUint("until", block.timestamp + 172800);
-    sendChainlinkRequestTo(oracleAddress, req, 1 * 1e18); /* This gives me error */
-    emit SendingTokens(req.id);
+    sendChainlinkRequestTo(oracleAddress, req, 1 * 1e18);
   }
 
   /** 
     @dev This functions will fullfill when the timer is done.
   **/
 
-  function fulfill_tokens() external {
+  function fulfill_tokens(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
     /*
       -->
       Add the logic to send all the tokens
@@ -412,15 +405,21 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     emit StatusOfLottery(statusLottery);
     /*
       -->
-      After this we can add another delay to choose the winner
-      and maybe generate the random number in the VRF.
+      After this we can add another delay to choose the winner.
     */
+     Chainlink.Request memory req = buildChainlinkRequest(
+      "0be1216ae9344e7b8e81539939b5ac64", 
+      address(this), 
+      this.fulfill_winner.selector
+    );
+    req.addUint("until", block.timestamp + 272800);
+    sendChainlinkRequestTo(oracleAddress, req, 1 * 1e18);
   }
 
   /**
     @dev This is the function to fullfill to choose the winner.
   **/
-  function fulfill_winner() external {
+  function fulfill_winner(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
     chooseWinner();
   }
 }
