@@ -5,6 +5,7 @@
 require('dotenv').config();
 require('@nomiclabs/hardhat-truffle5');
 require('@nomiclabs/hardhat-web3');
+require('@openzeppelin/hardhat-upgrades');
 
 module.exports = {
   networks: {

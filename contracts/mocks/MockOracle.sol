@@ -309,16 +309,6 @@ contract MockOracle is ChainlinkRequestInterface, LinkTokenReceiver {
       _data);
   }
 
-  // Maybe encode data?
-  // function encodeRequest(Request memory _req) private view returns (bytes memory) {
-  //   return abi.encodeWithSelector(
-  //     this.oracleRequest.selector,
-  //     SENDER_OVERRIDE,
-  //     AMOUNT_OVERRIDE,
-  //     _req.
-  //   );
-  // }
-
   /**
    * @notice Called by the Chainlink node to fulfill requests
    * @dev Given params must hash back to the commitment stored from `oracleRequest`.

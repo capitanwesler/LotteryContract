@@ -4,12 +4,13 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "@chainlink/contracts/src/v0.8/dev/ChainlinkClient.sol";
+import "./RandomNumberConsumer.sol";
+import "./ChainlinkClientUpgradeable.sol";
 import "./interfaces/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./RandomNumberConsumer.sol";
 
-contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
+contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeable {
   /**
     @dev Using safe math for all the operations with
     uint256.
@@ -26,8 +27,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
   /**
     @notice This is the counter for the tickets that we can sell.
   **/
-  uint256 public supplyTickets = 2**256 - 1;
-  uint256 public supplyTicketsRunning = 2**256 - 1;
+  uint256 public supplyTickets;
+  uint256 public supplyTicketsRunning;
 
   /**
     @notice This is `maxTicketsPerPlayer` this can
@@ -77,6 +78,12 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
   uint256 public playersRunningCount;
 
   /**
+    @dev This is the address of the randomNumberConsumer.
+  **/
+
+  address public randomNumberConsumer;
+
+  /**
     @dev This is to check when a lottery is already running.
   **/
   enum LotteryStatus {CLOSE, OPEN}
@@ -118,7 +125,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
   function initialize(
       uint256 _ticketCost, 
       address _admin, 
-      uint256 _ticketsPerPlayer
+      uint256 _ticketsPerPlayer,
+      address _randomNumberConsumer
     )
       public 
       initializer
@@ -126,6 +134,9 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
     maxTicketsPerPlayer = _ticketsPerPlayer;
     ticketCost = _ticketCost;
     admin = _admin;
+    randomNumberConsumer = _randomNumberConsumer;
+    supplyTickets = 2**256 - 1;
+    supplyTicketsRunning = 2**256 - 1;
   }
 
   /** 
@@ -272,28 +283,35 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
     emit StatusOfLottery(statusLottery);
   }
 
+  /** 
+    @dev This can be called to get the randomNumber.
+  **/
+  function _getRandomNumber() external onlyAdmin {
+    RandomNumberConsumer(randomNumberConsumer).getRandomNumber(554321);
+  }
+
 
   /**
-    @param _randomNumber This is the randomNumber as a parameter to choose the winner.
     @dev This function is going to be shot, after five days to choose the winner
     of the interest in the pools.
   **/
 
-  function chooseWinner(uint256 _randomNumber) external /* Add modifier who should call */ {
+  function chooseWinner() external returns(bool) /* Add modifier who should call */ {
     /*
       Get the interests for that user from the
       pool that we had the lottery.
     */
 
     for (uint256 i = 0; i < playersCount; i++) {
-      if (_randomNumber >= players[i].initialBuy && _randomNumber <= players[i].endBuy) {
+      if (RandomNumberConsumer(randomNumberConsumer).randomResult() >= players[i].initialBuy && RandomNumberConsumer(randomNumberConsumer).randomResult() <= players[i].endBuy) {
         /*
           -->
           Logic for earning the interest to this
-          address and giving the admin 5% of fee.
+          address and giving the admin 5% of fee,
+          and generating the randomNumber.
         */
 
-        emit Winner(players[i].owner, _randomNumber);
+        emit Winner(players[i].owner, RandomNumberConsumer(randomNumberConsumer).randomResult());
       }
     }
 
@@ -320,5 +338,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClient {
 
     statusLottery = LotteryStatus.OPEN;
     emit StatusOfLottery(statusLottery);
+
+    return true;
   }
 }
