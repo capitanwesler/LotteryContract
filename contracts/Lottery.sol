@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./RandomNumberConsumer.sol";
 
 contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeable {
+  using Chainlink for Chainlink.Request;
   /**
     @dev Using safe math for all the operations with
     uint256.
@@ -90,6 +91,17 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   address public randomNumberConsumer;
 
   /**
+    @dev This is the address of the ChainlinkRequester.
+  **/
+
+  address public oracleAddress;
+
+  /**
+    @dev This is the seed for the randomNumber.
+  **/
+  uint256 public seed;
+
+  /**
     @dev This is to check when a lottery is already running.
   **/
   enum LotteryStatus {CLOSE, OPEN}
@@ -128,6 +140,13 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     address indexed person,
     uint256 ticketWinner
   );
+
+  /**
+    @notice Event that shot when a request is completed.
+  **/
+  event SendingTokens (
+    bytes32 requestId
+  );
   
   /** 
     @dev Initializer of the function, here we will set
@@ -141,7 +160,9 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       uint256 _ticketCost, 
       address _admin, 
       uint256 _ticketsPerPlayer,
-      address _randomNumberConsumer
+      address _randomNumberConsumer,
+      address _oracleAddress, 
+      uint256 _seed
     )
       public 
       initializer
@@ -154,6 +175,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     supplyTickets = 2**256 - 1;
     supplyTicketsRunning = 2**256 - 1;
     statusLottery = LotteryStatus.OPEN;
+    seed = _seed;
+    oracleAddress = _oracleAddress;
   }
 
   /** 
@@ -283,62 +306,19 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     }
   }
 
-  /**
-    @dev This is the function to send the tokens
-    and when is pass the 2 days, it will fullfill
-    to transfers the tokens to the a specific pool.
-  **/
-
-  function sendTokensToPool(address _oracleAddress) external /* Add modifier who should call */ {
-    require(statusLottery == LotteryStatus.OPEN, "sendTokensToPool: LOTTERY_NEED_TO_BE_OPEN");
-    Chainlink.Request memory req = buildChainlinkRequest("0be1216ae9344e7b8e81539939b5ac64", address(this), this.fulfill_tokens.selector);
-    req.addUint("until", block.timestamp + 172800);
-    sendChainlinkRequestTo(_oracleAddress, req, 1 * 1e18);
-  }
-
-  /** 
-    @dev This functions will fullfill when the timer is done.
-  **/
-
-  function fulfill_tokens() external {
-    /*
-      -->
-      Add the logic to send all the tokens
-      of one asset to a specific pool of that
-      asset either in COMPUND pools or AAVE pools.
-    */
-
-    statusLottery = LotteryStatus.CLOSE;
-    emit StatusOfLottery(statusLottery);
-
-    /*
-      -->
-      After this we can add another delay to choose the winner
-      and maybe generate the random number in the VRF.
-    */
-  }
-
   /** 
     @dev This can be called to get the randomNumber.
   **/
-  function _getRandomNumber(uint256 _seed) external onlyAdmin {
+  function _getRandomNumber(uint256 _seed) internal {
     bytes32 requestId = RandomNumberConsumer(randomNumberConsumer).getRandomNumber(_seed);
     emit RandomNumber(requestId, _seed);
   }
-
-  /** 
-    @dev Set the randomNumber.
-  **/
-  function _setRandomNumber() external onlyAdmin {
-    randomNumber = RandomNumberConsumer(randomNumberConsumer).randomResult();
-  }
-
   
   /** 
     @dev Get the randomNumber.
   **/
   function getRandomNumber() external view onlyAdmin returns(uint256) {
-    return randomNumber;
+    return RandomNumberConsumer(randomNumberConsumer).randomResult();
   }
 
 
@@ -347,7 +327,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     of the interest in the pools.
   **/
 
-  function chooseWinner() external returns(bool) /* Add modifier who should call */ {
+  function chooseWinner() internal {
     /*
       -->
       Get the interests for that user from the
@@ -395,7 +375,52 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
     statusLottery = LotteryStatus.OPEN;
     emit StatusOfLottery(statusLottery);
+  }
 
-    return true;
+  /**
+    @dev This is the function to send the tokens
+    and when is pass the 2 days, it will fullfill
+    to transfers the tokens to the a specific pool.
+  **/
+
+  function sendTokensToPool() external /* Add modifier who should call */ {
+    require(statusLottery == LotteryStatus.OPEN, "sendTokensToPool: LOTTERY_NEED_TO_BE_OPEN");
+    Chainlink.Request memory req = buildChainlinkRequest(
+      "0be1216ae9344e7b8e81539939b5ac64", 
+      address(this), 
+      this.fulfill_tokens.selector
+    );
+    req.addUint("until", block.timestamp + 172800);
+    sendChainlinkRequestTo(oracleAddress, req, 1 * 1e18); /* This gives me error */
+    emit SendingTokens(req.id);
+  }
+
+  /** 
+    @dev This functions will fullfill when the timer is done.
+  **/
+
+  function fulfill_tokens() external {
+    /*
+      -->
+      Add the logic to send all the tokens
+      of one asset to a specific pool of that
+      asset either in COMPUND pools or AAVE pools.
+    */
+    _getRandomNumber(seed); /* This is to get the request for getting the randomNumber */
+
+    statusLottery = LotteryStatus.CLOSE;
+    emit StatusOfLottery(statusLottery);
+    /*
+      -->
+      After this we can add another delay to choose the winner
+      and maybe generate the random number in the VRF.
+    */
+  }
+
+  /**
+    @dev This is the function to fullfill to choose the winner.
+  **/
+  function fulfill_winner() external {
+    chooseWinner();
   }
 }

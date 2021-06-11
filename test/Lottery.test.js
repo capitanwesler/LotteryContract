@@ -46,46 +46,49 @@ describe('Testing: Lottery Contract', async () => {
       ethers.utils.parseEther('5')
     );
 
+    // - MockOracle for the AlarmClock:
+    alarmClock = await MockOracle.deploy(LINK);
+    await alarmClock.deployed();
+
     // - Lottery:
     lottery = await upgrades.deployProxy(Lottery, [
       2,
       accounts[0].address,
       500,
       randomNumber.address,
+      alarmClock.address,
+      45665,
     ]);
     await lottery.deployed();
-
-    // - MockOracle for the AlarmClock:
-    alarmClock = MockOracle.deploy();
-    await alarmClock.deployed();
   });
 
   it('should get the randomResult number from the contract consumer', async () => {
-    const tx = await lottery._getRandomNumber(5665);
+    const tx = await lottery.sendTokensToPool();
     const receipt = await tx.wait();
 
-    const requestId = receipt.events[3].args.requestId;
-    const random = Math.floor(Math.random() * 100000);
+    console.log(receipt);
+    // const requestId = receipt.events[3].args.requestId;
+    // const random = Math.floor(Math.random() * 100000);
 
-    /*
-      This is the VRFCoordinator that simulates the
-      node calling the callback function.
-    */
-    await VRFcoordinator.callBackWithRandomness(
-      requestId,
-      ethers.utils.parseUnits(String(random), 18),
-      randomNumber.address
-    );
+    // /*
+    //   This is the VRFCoordinator that simulates the
+    //   node calling the callback function.
+    // */
+    // await VRFcoordinator.callBackWithRandomness(
+    //   requestId,
+    //   ethers.utils.parseUnits(String(random), 18),
+    //   randomNumber.address
+    // );
 
-    await lottery._setRandomNumber();
+    // await lottery._setRandomNumber();
 
-    console.log(
-      'Random Number: >> ',
-      (await lottery.getRandomNumber()).toString()
-    );
+    // console.log(
+    //   'Random Number: >> ',
+    //   (await lottery.getRandomNumber()).toString()
+    // );
   });
 
   // it ('should shot a determinate function when the clock is done', async () => {
-  //   const
+
   // });
 });
