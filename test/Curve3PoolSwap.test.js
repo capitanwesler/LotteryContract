@@ -18,7 +18,9 @@ const AAVE_ADDRESS = '0xDeBF20617708857ebe4F679508E7b7863a8A8EeE';
 let iStableSwap;
 let iERC20weth;
 let iExchange;
-
+let iERC20Dai;
+let iERC20USDT;
+let swapper;
 describe('Testing Swaap with 3Pool', () => {
   before(async () => {
     // Getting the instance of the contracts
@@ -26,22 +28,70 @@ describe('Testing Swaap with 3Pool', () => {
 
     iERC20weth = await ethers.getContractAt('IERC20Weth', WETH_ADDRESS);
 
+    iERC20Dai = await ethers.getContractAt('IERC20', DAI_ADDRESS);
+
+    iERC20USDT = await ethers.getContractAt('IERC20', USDT_ADDRESS);
+
     iExchange = await ethers.getContractAt('IExchange', EXCHANGE_ADDRESS);
+
+    Swapper = await ethers.getContractFactory('Swapper');
+
+    swapper = await Swapper.deploy(ADMIN);
+    await swapper.deployed();
   });
 
   it('should get the pool balances and coins array', async () => {
-    // //Getting balance and coin of the pool
+    //Getting balance and coin of the pool
+
+    //Swap Eth for Dai
+
+    await swapper.swapEthForTokens([DAI_ADDRESS, USDT_ADDRESS], [500, 500], {
+      from: ADMIN,
+      value: ethers.utils.parseEther('5'),
+    });
+
+    const daiBalance = await iERC20Dai.balanceOf(ADMIN);
+
+    console.log('Current Balance of Dai: ', daiBalance.toString());
+
+    const bestRate = await iExchange.get_best_rate(
+      DAI_ADDRESS,
+      USDT_ADDRESS,
+      ethers.utils.parseUnits('10', 18)
+    );
     console.log(
-      await iExchange.get_best_rate(
-        DAI_ADDRESS,
-        USDT_ADDRESS,
-        ethers.utils.parseUnits('10', 18)
-      )
+      'Best Rate Pool and Amount is:',
+      bestRate[0],
+      bestRate[1].toString()
     );
 
-    const balance = await iStableSwap.coins(0);
+    //Get expected amount
+    const bestAmount = await iExchange.get_exchange_amount(
+      bestRate[0],
+      DAI_ADDRESS,
+      USDT_ADDRESS,
+      daiBalance
+    );
 
-    console.log(balance);
+    console.log('Best amount available:', bestAmount.toString());
+
+    //Allow Exchange contract to spend Dai
+    const Allow = await iERC20Dai.approve(EXCHANGE_ADDRESS, daiBalance, {
+      from: ADMIN,
+    });
+
+    //Check weth available dai to spend
+    const allowance = await iERC20Dai.allowance(ADMIN, EXCHANGE_ADDRESS);
+    console.log('Dai Allowed to be spend: ', allowance.toString());
+
+    const exchangeTx = await iExchange.exchange(
+      bestRate[0],
+      DAI_ADDRESS,
+      USDT_ADDRESS,
+      bestAmount - 960323532174,
+      0,
+      ADMIN
+    );
     // const coins = await iStableSwap.coins(0);
 
     // //Balance and address of DAI
