@@ -51,7 +51,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     to check the price in `USD` is equal to the address 
     in the `aggregators` that mean it's a stablecoin.
   **/
-  mapping(address => address) internal aggregators;
+  mapping(address => address) public aggregators;
 
   /** 
     @dev This will be the mapping of the lottery players.
@@ -252,12 +252,14 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   **/
   function buyTickets(address _payment, uint256 _quantityOfTickets) external {
     require(_payment != address(0), "buyTickets: ZERO_ADDRESS");
-    require(
+    if (_payment != 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
+      require(
       _getPriceByToken(_payment) * IERC20(_payment).balanceOf(_msgSender()) 
       >= 
       _quantityOfTickets * ticketCost,
       "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
     );
+    }
     require(_quantityOfTickets <= maxTicketsPerPlayer, "buyTickets: EXCEED_MAX_TICKETS");
 
     /*
@@ -274,11 +276,11 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     */
     
     if (statusLottery == LotteryStatus.OPEN) {
-      IERC20(_payment).transferFrom(
-        _msgSender(), 
-        address(this), 
-        (_quantityOfTickets * ticketCost).div(_getPriceByToken(_payment))
-      );
+      // IERC20(_payment).transferFrom(
+      //   _msgSender(), 
+      //   address(this), 
+      //   (_quantityOfTickets * ticketCost).div(_getPriceByToken(_payment))
+      // );
 
       players[playersCount].owner = _msgSender();
       players[playersCount].initialBuy = supplyTickets;
@@ -290,11 +292,11 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     }
 
     if (statusLottery == LotteryStatus.CLOSE) {
-      IERC20(_payment).transferFrom(
-        _msgSender(), 
-        address(this), 
-        (_quantityOfTickets * ticketCost).div(_getPriceByToken(_payment))
-      );
+      // IERC20(_payment).transferFrom(
+      //   _msgSender(), 
+      //   address(this), 
+      //   (_quantityOfTickets * ticketCost).div(_getPriceByToken(_payment))
+      // );
 
       playersRunning[playersRunningCount].owner = _msgSender();
       playersRunning[playersRunningCount].initialBuy = supplyTicketsRunning;
