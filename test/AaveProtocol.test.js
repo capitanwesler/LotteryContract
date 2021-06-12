@@ -84,8 +84,28 @@ describe('Testing Lending Pools of Aave', () => {
         }
       );
 
+      //Once the weth it's deposited it starts to earn interests
       const aWethBalance = await aWeth.balanceOf(ADMIN);
-      console.log('Balance of aWeth Token: ', aWethBalance.toString());
+      const wethBalance = await weth.balanceOf(ADMIN);
+      console.log(
+        'Balance of aWeth Token: ',
+        aWethBalance.toString(),
+        'Remaining Balance of Weth token: ',
+        wethBalance.toString()
+      );
+
+      //Withdrawing
+      await iAaveLendingPool.withdraw(WETH_ADDRESS, toWei(1), ADMIN);
+      const finalWeth = await weth.balanceOf(ADMIN);
+      const finalAWeth = await aWeth.balanceOf(ADMIN);
+
+      console.log(
+        'After withdraw: \n',
+        'Balance of aWeth Token: ',
+        finalAWeth.toString(),
+        '\n Remaining Balance of Weth token: ',
+        finalWeth.toString()
+      );
     } catch (error) {
       console.log('There was an error getting the lending pool address', error);
     }
