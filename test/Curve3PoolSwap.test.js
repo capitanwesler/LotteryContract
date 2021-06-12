@@ -83,11 +83,11 @@ describe('Testing Swaap with 3Pool', () => {
 
     console.log('Obtained Indexes(send, receive): ', sendIndex, receiveIndex);
 
-    const exchangeTx = await iStableSwap.exchange(
-      sendIndex,
-      receiveIndex,
-      100,
-      100
+    const exchangeTx = await iStableSwap.exchange_underlying(
+      0,
+      2,
+      ethers.utils.parseUnits('100', 18),
+      1
     );
 
     console.log('Transaction Receipt: ', exchangeTx);
