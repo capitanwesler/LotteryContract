@@ -13,35 +13,35 @@ const fromWei = (value, type) =>
   Number(web3.utils.fromWei(String(value), type));
 const toBN = (value) => web3.utils.toBN(String(value));
 
-
 describe('Testing Swaap with 3Pool', () => {
-    let i3Pool
+  let i3Pool;
 
   before(async () => {
+    //Impersonating account
+    await hre.network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [ADMIN2],
+    });
     // Getting the instance of the contract
-    i3Pool = await I3Pool.at(
-      '0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7'
-    );
+    i3Pool = await I3Pool.at('0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7');
   });
-  
-  it('should get the pool balances and coins array', async () => {
 
+  it('should get the pool balances and coins array', async () => {
     //Getting balance and coin of the pool
     const balance = await i3Pool.balances.call(0);
     const coins = await i3Pool.coins.call(0);
-    
+
     //Balance and address of DAI
-    console.log("Balance:", balance.toString(),"Coin:", coins);
+    console.log('Balance:', balance.toString(), 'Coin:', coins);
   });
 
   it('Should make an exchange', async () => {
-
     //Get the the amount that would receive
-    const amount = await i3Pool.get_dy(1, 2, 100)
-    console.log(amount.toString(), "im amount");
+    const amount = await i3Pool.get_dy(1, 2, 100);
+    console.log(amount.toString(), 'im amount');
 
     //Exchange
-    const txEchange = await i3Pool.exchange(1, 2, 100, amount)
-    console.log(txEchange, "im exchange");
-  })
-})
+    const txEchange = await i3Pool.exchange(1, 2, 100, amount);
+    console.log(txEchange, 'im exchange');
+  });
+});
