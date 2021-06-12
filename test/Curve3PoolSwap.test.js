@@ -24,7 +24,7 @@ let swapper;
 describe('Testing Swaap with 3Pool', () => {
   before(async () => {
     // Getting the instance of the contracts
-    iStableSwap = await ethers.getContractAt('IStableSwap', AAVE_ADDRESS);
+    // iStableSwap = await ethers.getContractAt('IStableSwap', AAVE_ADDRESS);
 
     iERC20weth = await ethers.getContractAt('IERC20Weth', WETH_ADDRESS);
 
@@ -65,66 +65,33 @@ describe('Testing Swaap with 3Pool', () => {
       bestRate[1].toString()
     );
 
-    //Get expected amount
-    const bestAmount = await iExchange.get_exchange_amount(
-      bestRate[0],
-      DAI_ADDRESS,
-      USDT_ADDRESS,
-      daiBalance
-    );
-
-    console.log('Best amount available:', bestAmount.toString());
+    //Get instance of te pool
+    iStableSwap = await ethers.getContractAt('IStableSwap', bestRate[0]);
 
     //Allow Exchange contract to spend Dai
-    const Allow = await iERC20Dai.approve(EXCHANGE_ADDRESS, daiBalance, {
+    const Allow = await iERC20Dai.approve(bestRate[0], daiBalance, {
       from: ADMIN,
     });
 
     //Check weth available dai to spend
-    const allowance = await iERC20Dai.allowance(ADMIN, EXCHANGE_ADDRESS);
+    const allowance = await iERC20Dai.allowance(ADMIN, bestRate[0]);
     console.log('Dai Allowed to be spend: ', allowance.toString());
 
-    const exchangeTx = await iExchange.exchange(
-      bestRate[0],
-      DAI_ADDRESS,
-      USDT_ADDRESS,
-      bestAmount - 960323532174,
-      0,
-      ADMIN
-    );
-    // const coins = await iStableSwap.coins(0);
+    //Getting underlying tokens addresses
+    const sendIndex = await iStableSwap.underlying_coins(0);
+    const receiveIndex = await iStableSwap.underlying_coins(2);
 
+    console.log('Obtained Indexes(send, receive): ', sendIndex, receiveIndex);
+
+    const exchangeTx = await iStableSwap.exchange(
+      sendIndex,
+      receiveIndex,
+      100,
+      100
+    );
+
+    console.log('Transaction Receipt: ', exchangeTx);
     // //Balance and address of DAI
     // console.log('Balance:', balance.toString(), 'Coin:', coins);
   });
-
-  // it('Should make an exchange', async () => {
-  //   //Get the the amount that would receive
-  //   const amount = await i3Pool.get_dy(1, 2, 100);
-  //   console.log(amount.toString(), 'im amount');
-
-  //   //Depositing to the WETH contract to get weth from eth
-  //   const deposit = await iERC20weth.deposit({
-  //     value: ethers.utils.parseUnits('1', 18),
-  //   });
-  //   const balance = await iERC20weth.balanceOf(ADMIN);
-  //   console.log('Current Weth Balance: ', balance.toString());
-
-  //   //Allow to spend weth
-  //   const Allow = await iERC20weth.approve(
-  //     I3POOL_ADDRESS,
-  //     ethers.utils.parseUnits('1', 18),
-  //     {
-  //       from: ADMIN,
-  //     }
-  //   );
-
-  //   //Check weth available to spend
-  //   const allowance = await iERC20weth.allowance(ADMIN, I3POOL_ADDRESS);
-  //   console.log('Weth Allowed to be spend: ', allowance.toString());
-
-  //   //Exchange
-  //   const txEchange = await i3Pool.exchange(1, 2, 100, amount);
-  //   console.log(txEchange, 'im exchange');
-  // });
 });
