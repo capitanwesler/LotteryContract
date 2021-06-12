@@ -10,6 +10,11 @@ let i3Pool;
 
 describe('Testing Swaap with 3Pool', () => {
   before(async () => {
+    //Impersonating account
+    await hre.network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [ADMIN2],
+    });
     // Getting the instance of the contract
     i3Pool = ethers.getContractAt(
       'I3Pool',
@@ -36,3 +41,9 @@ describe('Testing Swaap with 3Pool', () => {
   //   console.log(txEchange, 'im exchange');
   // });
 });
+
+    //Exchange
+    const txEchange = await i3Pool.exchange(1, 2, 100, amount)
+    console.log(txEchange, "im exchange");
+  })
+})
