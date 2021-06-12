@@ -33,7 +33,7 @@ describe('Testing Lending Pools of Aave', () => {
       'IAaveLendingPool',
       AAVELP_ADDRESS
     );
-    iAaveLendingPoolAddressesProvider = await ethers.getContractAt(
+    iAaveLengingPoolAddressesProvider = await ethers.getContractAt(
       'IAaveLendingPoolAddressesProvider',
       AAVELP_ADDRESS_PROVIDER
     );
