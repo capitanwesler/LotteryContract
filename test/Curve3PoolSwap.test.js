@@ -1,9 +1,5 @@
 const { assert, ethers } = require('hardhat');
 
-//Accounts with eth
-const ADMIN = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266'; // Using first account of the giving node forked
-const ADMIN2 = '0x1b3cb81e51011b549d78bf720b0d924ac763a7c2'; //17th place of the accounts with more ether according to etherscan
-
 //Utility Addresses
 const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';
@@ -21,6 +17,7 @@ let iExchange;
 let iERC20Dai;
 let iERC20USDT;
 let swapper;
+
 describe('Testing Swaap with 3Pool', () => {
   before(async () => {
     // Getting the instance of the contracts
@@ -36,7 +33,7 @@ describe('Testing Swaap with 3Pool', () => {
 
     Swapper = await ethers.getContractFactory('Swapper');
 
-    swapper = await Swapper.deploy(ADMIN);
+    swapper = await Swapper.deploy((await ethers.getSigners())[0].address);
     await swapper.deployed();
   });
 
@@ -45,37 +42,45 @@ describe('Testing Swaap with 3Pool', () => {
 
     //Swap Eth for Dai
 
-    await swapper.swapEthForTokens([DAI_ADDRESS, USDT_ADDRESS], [500, 500], {
-      from: ADMIN,
-      value: ethers.utils.parseEther('5'),
-    });
+    // await swapper.swapEthForTokens([DAI_ADDRESS], [1000], {
+    //   from: (await ethers.getSigners())[0].address,
+    //   value: ethers.utils.parseEther('1'),
+    // });
 
-    const daiBalance = await iERC20Dai.balanceOf(ADMIN);
+    let daiBalance = await iERC20Dai.balanceOf(
+      (
+        await ethers.getSigners()
+      )[0].address
+    );
 
-    console.log('Current Balance of Dai: ', daiBalance.toString());
+    console.log('Current Balance of Dai: >> ', daiBalance.toString());
 
     const bestRate = await iExchange.get_best_rate(
       DAI_ADDRESS,
       USDT_ADDRESS,
-      ethers.utils.parseUnits('10', 18)
-    );
-    console.log(
-      'Best Rate Pool and Amount is:',
-      bestRate[0],
-      bestRate[1].toString()
+      ethers.utils.parseUnits('100', 18)
     );
 
     //Get instance of te pool
     iStableSwap = await ethers.getContractAt('IStableSwap', bestRate[0]);
 
     //Allow Exchange contract to spend Dai
-    const Allow = await iERC20Dai.approve(bestRate[0], daiBalance, {
-      from: ADMIN,
+    await iERC20Dai.approve(bestRate[0], daiBalance, {
+      from: (await ethers.getSigners())[0].address,
     });
 
     //Check weth available dai to spend
-    const allowance = await iERC20Dai.allowance(ADMIN, bestRate[0]);
-    console.log('Dai Allowed to be spend: ', allowance.toString());
+    const allowance = await iERC20Dai.allowance(
+      (
+        await ethers.getSigners()
+      )[0].address,
+      bestRate[0]
+    );
+
+    console.log(
+      'Dai Allowed to be spend by the Swapper: >> ',
+      allowance.toString()
+    );
 
     //Getting underlying tokens addresses
     const sendIndex = await iStableSwap.underlying_coins(0);
@@ -83,15 +88,28 @@ describe('Testing Swaap with 3Pool', () => {
 
     console.log('Obtained Indexes(send, receive): ', sendIndex, receiveIndex);
 
-    const exchangeTx = await iStableSwap.exchange_underlying(
+    const receivedInSwap = await iStableSwap.exchange_underlying(
       0,
       2,
       ethers.utils.parseUnits('100', 18),
-      1
+      1,
+      { from: (await ethers.getSigners())[0].address }
     );
 
-    console.log('Transaction Receipt: ', exchangeTx);
-    // //Balance and address of DAI
-    // console.log('Balance:', balance.toString(), 'Coin:', coins);
+    console.log('Received in swap: >> ', receivedInSwap.toString());
+    console.log('---------------');
+    console.log(
+      'My Balance of USDT: >> ',
+      (
+        await iERC20USDT.balanceOf((await ethers.getSigners())[0].address)
+      ).toString()
+    );
+    daiBalance = await iERC20Dai.balanceOf(
+      (
+        await ethers.getSigners()
+      )[0].address
+    );
+
+    console.log('Current Balance of Dai: >> ', daiBalance.toString());
   });
 });

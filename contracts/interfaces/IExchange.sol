@@ -29,10 +29,9 @@ function get_exchange_amount(address _pool,address  _from, address _to, uint256 
     @param  _to: Address of coin being received.
     @param  _amount: Quantity of _from being sent.
     @param  _expected: Minimum quantity of _to received in order for the transaction to succeed.
-    @param  _receiver: Optional address to transfer the received tokens to. If not specified, defaults to the caller.
     @return Returns the amount of _to received in the exchange.
 
   **/
-function exchange(address _pool,address _from,address _to, uint256 _amount, uint256 _expected, address _receiver) external view returns(uint256);
+function exchange(address _pool,address _from,address _to, uint256 _amount, uint256 _expected) external view returns(uint256);
 
 }
