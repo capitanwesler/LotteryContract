@@ -329,36 +329,36 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   **/
   function getATokenAddress(address _LPAddress,address _tokenAddress) internal returns(address) {
     //Using AAVE
-    if(_LPAddress == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9){
+    if(_LPAddress == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
       //Getting Atoken Of DAI
-      if(_tokenAddress == 0x6B175474E89094C44Da98b954EedeAC495271d0F){
+      if(_tokenAddress == 0x6B175474E89094C44Da98b954EedeAC495271d0F) {
         //returns aDAI
-        return 0x028171bCA77440897B824Ca71D1c56caC55b68A3
+        return 0x028171bCA77440897B824Ca71D1c56caC55b68A3;
       }
       //Getting Atoken Of Link
-      if(_tokenAddress == 0x514910771AF9Ca656af840dff83E8264EcF986CA){
+      if(_tokenAddress == 0x514910771AF9Ca656af840dff83E8264EcF986CA) {
         //returns aLink
-        return 0xa06bC25B5805d5F8d82847D191Cb4Af5A3e873E0
+        return 0xa06bC25B5805d5F8d82847D191Cb4Af5A3e873E0;
       }
       //Getting Atoken Of USDT
-      if(_tokenAddress == 0xdAC17F958D2ee523a2206206994597C13D831ec7){
+      if(_tokenAddress == 0xdAC17F958D2ee523a2206206994597C13D831ec7) {
         //returns aUSDT
-        return 0x3Ed3B47Dd13EC9a98b44e6204A523E766B225811
+        return 0x3Ed3B47Dd13EC9a98b44e6204A523E766B225811;
       }
       //Getting Atoken Of USDC
       if(_tokenAddress == 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48){
         //returns aUSDC
-        return 0xBcca60bB61934080951369a648Fb03DF4F96263C
+        return 0xBcca60bB61934080951369a648Fb03DF4F96263C;
       }
       //Getting Atoken Of TUSD
-      if(_tokenAddress == 0x0000000000085d4780B73119b644AE5ecd22b376){
+      if(_tokenAddress == 0x0000000000085d4780B73119b644AE5ecd22b376) {
         //returns aTUSD
-        return 0x101cc05f4A51C0319f570d5E146a8C625198e636
+        return 0x101cc05f4A51C0319f570d5E146a8C625198e636;
       }
       //Getting Atoken Of BUSD
-      if(_tokenAddress == 0x4Fabb145d64652a948d72533023f6E7A623C7C53){
+      if(_tokenAddress == 0x4Fabb145d64652a948d72533023f6E7A623C7C53) {
         //returns aBUSD
-        return 0xA361718326c15715591c299427c62086F69923D9
+        return 0xA361718326c15715591c299427c62086F69923D9;
       }
     }
   }
