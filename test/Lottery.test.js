@@ -106,6 +106,7 @@ describe('Testing: Lottery Contract', async () => {
       alarmClock.address,
       45665,
       '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9',
+      USDT,
     ]);
     await lottery.deployed();
 
@@ -127,6 +128,7 @@ describe('Testing: Lottery Contract', async () => {
       alarmClock.address,
       45665,
       '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9',
+      USDT,
     ]);
     await lotteryTest.deployed();
 

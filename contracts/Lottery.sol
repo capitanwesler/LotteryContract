@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./interfaces/IExchange.sol";
 import "./interfaces/IAaveLendingPool.sol";
-import "./interfaces/IERC20WETH.sol";
+import "./interfaces/IERC20Weth.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeable {
@@ -35,7 +35,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @dev Balance of the holder after sending the tokens to earn
     interest.
   **/
-  uint256 private balanceToken;
+  uint256 public balanceToken;
 
   /**
     @dev Lending pool of this week, and what should the user
@@ -283,27 +283,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       IAaveLendingPool(_LPAddress).withdraw(_tokenAddress, _balance, address(this));
     }
   }
-  
-  /**
-    @dev Depositing to the selected pool to earn interest.
-    @param _balance Balance to deposit inside the pool.
-    @param _LPAddress This is the pool that'll generate the interest.
-    @param _tokenAddress Token that will be deposited.
-  **/
-
-  function LPDeposit(uint256 _balance, address _LPAddress, address _tokenAddress) internal {
-    if(_tokenAddress == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE){
-      IERC20Weth(WETH).deposit{value: msg.value}();
-
-      IERC20Metadata(WETH).approve(_LPAddress, _balance);
-    
-      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this), 0);
-    } else {
-      IERC20Metadata(_tokenAddress).approve(_LPAddress, _balance);
-
-      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this), 0);
-    }
-  }
 
   /**
     @dev Getting the earned interest in atoken
@@ -411,7 +390,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       _amount
     );
     IERC20Metadata(_tokenFrom).safeTransferFrom(_msgSender(), address(this), _amount);
-    IERC20Metadata(_tokenFrom).approve(_pool, _amount);
+    IERC20Metadata(_tokenFrom).safeApprove(_pool, _amount);
     IStableSwap(_pool).exchange_underlying(_from, _to, _amount, 1);
   }
 
@@ -511,14 +490,17 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     */
 
     balanceToken = IERC20Metadata(balanceHolderAddress).balanceOf(address(this));
-    LPDeposit(IERC20Metadata(balanceHolderAddress).balanceOf(address(this)), lendingPool, balanceHolderAddress);
+
+    IERC20Metadata(balanceHolderAddress).safeApprove(lendingPool, balanceToken);
+
+    IAaveLendingPool(lendingPool).deposit(balanceHolderAddress, balanceToken, address(this), 0);
 
     _getRandomNumber(seed); /* This is to get the request for getting the randomNumber */
 
     statusLottery = LotteryStatus.CLOSE;
     emit StatusOfLottery(statusLottery);
     
-     Chainlink.Request memory req = buildChainlinkRequest(
+    Chainlink.Request memory req = buildChainlinkRequest(
       "0be1216ae9344e7b8e81539939b5ac64", 
       address(this), 
       this.fulfill_winner.selector
@@ -531,6 +513,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @dev This is the function to fullfill to choose the winner.
   **/
   function fulfill_winner(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
+    withdrawFunds(lendingPool, balanceHolderAddress, type(uint256).max);
+
     for (uint256 i = 0; i < playersCount; i++) {
       if (randomNumber >= players[i].initialBuy && randomNumber <= players[i].endBuy) {
         /*
@@ -538,10 +522,19 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
           address and giving the admin 5% of fee.
         */
 
-        getEarnedInterest(getATokenAddress(lendingPool, balanceHolderAddress), balanceToken);
-        withdrawFunds(lendingPool, balanceHolderAddress, balanceToken);
+        IERC20Metadata(balanceHolderAddress)
+          .transfer(
+            players[i].owner, 
+            (players[i].quantityTickets * ticketCost) + getEarnedInterest(getATokenAddress(lendingPool, balanceHolderAddress), balanceToken)
+          );
 
         emit Winner(players[i].owner, RandomNumberConsumer(randomNumberConsumer).randomResult());
+      } else {
+        IERC20Metadata(balanceHolderAddress)
+          .transfer(
+            players[i].owner, 
+            players[i].quantityTickets * ticketCost
+          );
       }
     }
 
