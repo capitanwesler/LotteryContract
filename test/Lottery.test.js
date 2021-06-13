@@ -4,7 +4,6 @@ const assert = require('assert');
 const LINK = '0x514910771AF9Ca656af840dff83E8264EcF986CA';
 const DAI = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const USDT = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
-const EXCHANGE = '0xD1602F68CC7C4c7B59D686243EA35a9C73B0c6a2';
 
 /*
   This is just to get DAI tokens
@@ -106,6 +105,7 @@ describe('Testing: Lottery Contract', async () => {
       randomNumber.address,
       alarmClock.address,
       45665,
+      '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9',
     ]);
     await lottery.deployed();
 
@@ -114,8 +114,6 @@ describe('Testing: Lottery Contract', async () => {
     iERC20Dai = await ethers.getContractAt('IERC20', DAI);
 
     iERC20USDT = await ethers.getContractAt('IERC20', USDT);
-
-    iExchange = await ethers.getContractAt('IExchange', EXCHANGE);
   });
 
   it('should get the randomResult number from the contract consumer', async () => {
@@ -207,7 +205,11 @@ describe('Testing: Lottery Contract', async () => {
 
   it('should add a player to the lottery players mapping', async () => {
     console.log('Buying a tickets for the lottery...');
-    await lottery.buyTickets('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 200);
+    await lottery.buyTickets(
+      '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+      200,
+      ethers.utils.parseEther('200')
+    );
     const player = await lottery.players(0);
     console.log('Who buyed the tickets: >> ', player.owner);
     assert.strictEqual(accounts[0].address, player.owner);
@@ -219,7 +221,8 @@ describe('Testing: Lottery Contract', async () => {
     try {
       await lottery.buyTickets(
         '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-        1000
+        1000,
+        ethers.utils.parseEther('200')
       );
     } catch (error) {
       assert(error);
@@ -240,28 +243,21 @@ describe('Testing: Lottery Contract', async () => {
     console.log('StatusOfLottery: >> ', await lottery.statusLottery());
   });
 
-  it('should make a swap', async () => {
+  it('should make a swap with curve.fi', async () => {
     let daiBalance = await iERC20Dai.balanceOf(
       (
         await ethers.getSigners()
       )[0].address
     );
 
-    const bestRate = await iExchange.get_best_rate(
-      DAI,
-      USDT,
-      ethers.utils.parseEther('200')
-    );
-
     await iERC20Dai.approve(lottery.address, ethers.utils.parseEther('200'));
 
-    console.log('Pool to make the swap: >> ', bestRate[0]);
-
-    await lottery._swap(bestRate[0], 0, 2, ethers.utils.parseEther('190'), DAI);
-
-    console.log(
-      'Allowance of the pool: >> ',
-      (await iERC20Dai.allowance(accounts[0].address, bestRate[0])).toString()
+    await lottery._swapWithCurve(
+      0,
+      2,
+      ethers.utils.parseEther('190'),
+      DAI,
+      USDT
     );
 
     console.log('Current Balance of DAI: >> ', daiBalance.toString());
@@ -276,5 +272,40 @@ describe('Testing: Lottery Contract', async () => {
       'Current contract Balance of USDT: >> ',
       (await iERC20USDT.balanceOf(lottery.address)).toString()
     );
+  });
+
+  it('should make a swap with uniswap', async () => {
+    let daiBalance = await iERC20Dai.balanceOf(
+      (
+        await ethers.getSigners()
+      )[0].address
+    );
+
+    console.log('Initial balance of DAI: >> ', daiBalance);
+
+    await lottery._addAggregator(
+      '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+      '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'
+    );
+
+    await iERC20Dai.approve(
+      lottery.address,
+      2 /
+        (await lottery._getPriceByToken(
+          '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+        ))
+    );
+
+    await lottery._swapWithUniswap(DAI, {
+      value: ethers.utils.parseEther('2'),
+    });
+
+    daiBalance = await iERC20Dai.balanceOf(
+      (
+        await ethers.getSigners()
+      )[0].address
+    );
+
+    console.log('End balance of DAI: >> ', daiBalance);
   });
 });

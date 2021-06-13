@@ -9,16 +9,16 @@ import "./ChainlinkClientUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./RandomNumberConsumer.sol";
 import "./interfaces/IStableSwap.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol"; 
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "./interfaces/IExchange.sol";
+import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeable {
   using Chainlink for Chainlink.Request;
-  using SafeERC20 for IERC20;
-
-  /**
-    @dev Using safe math for all the operations with
-    uint256.
-  **/
+  using SafeERC20 for IERC20Metadata;
+  address constant EXCHANGE = 0xD1602F68CC7C4c7B59D686243EA35a9C73B0c6a2;
+  address constant UniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
   using SafeMath for uint256; 
 
   /**
@@ -27,6 +27,12 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     this will be in USD the price of the ticket.
   **/
   uint256 public ticketCost;
+
+  /**
+    @dev Lending pool of this week, and what should the user
+    swap the coins to.
+  **/
+  address public lendingPool;
 
   /**
     @notice This is the counter for the tickets that we can sell.
@@ -165,7 +171,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       uint256 _ticketsPerPlayer,
       address _randomNumberConsumer,
       address _oracleAddress, 
-      uint256 _seed
+      uint256 _seed,
+      address _lendingPool
     )
       public 
       initializer
@@ -180,6 +187,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     statusLottery = LotteryStatus.OPEN;
     seed = _seed;
     oracleAddress = _oracleAddress;
+    lendingPool = _lendingPool;
   }
 
   /** 
@@ -195,7 +203,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @param _tokenPayment Address of the ERC-20 Token.
   */
   function _getPriceByToken(address _tokenPayment)
-    internal
+    public
     view
     returns (uint256)
   {
@@ -225,6 +233,11 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     success = true;
   }
 
+  function setLendingPool(address _lendingPool) external onlyAdmin returns (address) {
+    lendingPool = _lendingPool;
+    return _lendingPool;
+  }
+
   /**
     @dev Function to add the aggregator to check the chainlink aggregator.
     @param _token This is the token what we want to get the `USD` price.
@@ -247,17 +260,39 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     delete aggregators[_token];
   }
 
+  function _swapWithUniswap(address _token) payable public {
+    /*
+      The value in wei, needs to be greater than 1.
+    */
+    require(msg.value >= 1, "swapWithUniswap: NEED_TO_BE_GREATER_THAT_ONE");
+
+    address[] memory _path = new address[](2);
+
+    _path[0] = IUniswapV2Router02(UniswapRouter).WETH();
+    _path[1] = address(_token);
+
+    IUniswapV2Router02(UniswapRouter).swapExactETHForTokens{value: msg.value}
+    (1, _path, _msgSender(), block.timestamp + 60);
+    IERC20Metadata(_token).safeTransferFrom(_msgSender(), address(this), _getPriceByToken(_token));
+  }
+
   /**
     @dev Function to make the swap in curve.fi.
-    @param _pool Address of the pool to make the swap.
     @param _from Index of the underlying_coin to swap.
     @param _to Index of the underlying_coin to swap into.
-    @param _token Address of the token to make the transaction of the transferFrom.
+    @param _amount Amount of coins to be swapped.
+    @param _tokenFrom Address of the token to make the transaction of the transferFrom.
+    @param _tokenTo Address of the token to get the rate.
   **/
 
-  function _swap(address _pool, int128 _from, int128 _to, uint256 _amount, address _token) external {
-    IERC20(_token).safeTransferFrom(_msgSender(), address(this), _amount);
-    IERC20(_token).approve(_pool, _amount);
+  function _swapWithCurve(int128 _from, int128 _to, uint256 _amount, address _tokenFrom, address _tokenTo) public {
+    (address _pool,) = IExchange(EXCHANGE).get_best_rate(
+      _tokenFrom, 
+      _tokenTo,
+      _amount
+    );
+    IERC20Metadata(_tokenFrom).safeTransferFrom(_msgSender(), address(this), _amount);
+    IERC20Metadata(_tokenFrom).approve(_pool, _amount);
     IStableSwap(_pool).exchange_underlying(_from, _to, _amount, 1);
   }
 
@@ -267,39 +302,37 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @param _payment The token that the users want to pay, this can be
     an stable coin or either an ERC20 Token (DAI, LINK).
   **/
-  function buyTickets(address _payment, uint256 _quantityOfTickets) external {
+  function buyTickets(address _payment, uint256 _quantityOfTickets, uint256 _amount, address _toSwap) external {
     require(_payment != address(0), "buyTickets: ZERO_ADDRESS");
-    if (_payment != 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
+    if (_payment == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
       require(
-      _getPriceByToken(_payment) * IERC20(_payment).balanceOf(_msgSender()) 
-      >= 
-      _quantityOfTickets * ticketCost,
-      "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
-    );
+        _getPriceByToken(_payment) * IERC20Metadata(_payment).balanceOf(_msgSender()).div(1e18)
+        >= 
+        _quantityOfTickets * ticketCost,
+        "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
+      );
+    } else {
+      require(
+        1 * IERC20Metadata(_payment).balanceOf(_msgSender()).div(10 ** IERC20Metadata(_payment).decimals())
+        >= 
+        _quantityOfTickets * ticketCost,
+        "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
+      );
     }
     require(_quantityOfTickets <= maxTicketsPerPlayer, "buyTickets: EXCEED_MAX_TICKETS");
 
     /*
-      -->
       We need to implement the swap
       to the pool token, that we are
       handling this week.
     */
-
-    
-
-    /*
-      This means that the _payment address is
-      not a stable coin, and we need to get the price.
-    */
+    if (_payment == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
+      _swapWithUniswap(_payment);
+    } else {
+      _swapWithCurve(0, 1, _amount, _payment, _toSwap);
+    }
     
     if (statusLottery == LotteryStatus.OPEN) {
-      // IERC20(_payment).transferFrom(
-      //   _msgSender(), 
-      //   address(this), 
-      //   (_quantityOfTickets * ticketCost).div(_getPriceByToken(_payment))
-      // );
-
       players[playersCount].owner = _msgSender();
       players[playersCount].initialBuy = supplyTickets;
       players[playersCount].endBuy = supplyTickets - _quantityOfTickets;
@@ -310,12 +343,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     }
 
     if (statusLottery == LotteryStatus.CLOSE) {
-      // IERC20(_payment).transferFrom(
-      //   _msgSender(), 
-      //   address(this), 
-      //   (_quantityOfTickets * ticketCost).div(_getPriceByToken(_payment))
-      // );
-
       playersRunning[playersRunningCount].owner = _msgSender();
       playersRunning[playersRunningCount].initialBuy = supplyTicketsRunning;
       playersRunning[playersRunningCount].endBuy = supplyTicketsRunning - _quantityOfTickets;
