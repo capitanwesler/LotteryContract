@@ -10,8 +10,11 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./RandomNumberConsumer.sol";
 import "./interfaces/IStableSwap.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./interfaces/IExchange.sol";
+import "./interfaces/IAaveLendingPool.sol";
+import "./interfaces/IERC20WETH.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeable {
@@ -33,6 +36,16 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     swap the coins to.
   **/
   address public lendingPool;
+
+  /**
+    @dev Address of the holder of the balance
+  **/
+  address public balanceHolderAddress;
+
+  /**
+    @dev Address of the A token holding the balance
+  **/
+  address public aTokenHolderAddress;
 
   /**
     @notice This is the counter for the tickets that we can sell.
@@ -172,7 +185,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       address _randomNumberConsumer,
       address _oracleAddress, 
       uint256 _seed,
-      address _lendingPool
+      address _lendingPool,
     )
       public 
       initializer
@@ -233,10 +246,80 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     success = true;
   }
 
+  
+  /**
+    @dev Setting the address of the lending pool to use
+    @notice This is for using LP and generating interest
+    @param _lendingPool This is the LP address
+  **/
+
   function setLendingPool(address _lendingPool) external onlyAdmin returns (address) {
     lendingPool = _lendingPool;
     return _lendingPool;
   }
+
+  /**
+    @dev Setting the address of token that holds the balance
+    @notice This is for calling the functions of a ERC20 token
+    @param _balanceHolderAddress This is the token holding the balance
+  **/
+
+  function setBalanceholderAddress(address _balanceHolderAddress) external onlyAdmin returns (address) {
+    balanceHolderAddress = _balanceHolderAddress;
+    return _balanceHolderAddress;
+  }
+  
+  /**
+    @dev Setting the address of atoken that holds the balance
+    @notice This is for calling the functions of a ERC20 token
+    @param _aTokenHolderAddress This is the token holding the balance
+  **/
+
+  function setATokenholderAddress(address _aTokenHolderAddress) external onlyAdmin returns (address) {
+    aTokenHolderAddress = _aTokenHolderAddress;
+    return _aTokenHolderAddress;
+  }
+
+  
+  /**
+    @dev Depositing to the selected pool to earn interest
+    @param _balance Balance to deposit inside the poo
+    @param _LPAddress This is the pool that'll generate the interest
+    @param _tokenAddress Token that will be deposited
+  **/
+
+  ///////////////////////////// WARNING ////////////////
+  //Tested only for aave pool 
+  function LPDeposit(uint256 _balance, address _LPAddress, _tokenAddress) external {
+    if(_tokenAddress == '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'){
+      //when exanching ETH use WETH
+      //Using the WETH address for the ERC20
+      IERC20Weth(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2).deposit(_balance)
+
+      //Approving the pool for spending our tokens
+      //Using de AAVE LP Address 
+      IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2).aprove(_LPAddress, _balance)
+
+      //Depositing to the pool
+      /**
+       address of the token to deposit, amount, address that will be registered the aToken to
+      **/
+      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this))
+   
+    } else {
+
+      //Approving the pool for spending our tokens
+      //Using de AAVE LP Address 
+      IERC20(_tokenAddress).aprove(_LPAddress, _balance)
+
+      //Depositing to the pool
+      /**
+       address of the token to deposit, amount, address that will be registered the aToken to
+      **/
+      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this))
+    }
+  }
+
 
   /**
     @dev Function to add the aggregator to check the chainlink aggregator.
@@ -446,8 +529,10 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       -->
       Add the logic to send all the tokens
       of one asset to a specific pool of that
-      asset either in COMPUND pools or AAVE pools.
+      asset either in COMPOUND pools or AAVE pools.
     */
+    _lendingPool
+
     _getRandomNumber(seed); /* This is to get the request for getting the randomNumber */
 
     statusLottery = LotteryStatus.CLOSE;
