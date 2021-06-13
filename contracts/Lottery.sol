@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./RandomNumberConsumer.sol";
 import "./interfaces/IStableSwap.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./interfaces/IExchange.sol";
 import "./interfaces/IAaveLendingPool.sol";
@@ -186,6 +185,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       address _oracleAddress, 
       uint256 _seed,
       address _lendingPool,
+      address _balanceHolder
     )
       public 
       initializer
@@ -201,6 +201,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     seed = _seed;
     oracleAddress = _oracleAddress;
     lendingPool = _lendingPool;
+    balanceHolderAddress = _balanceHolder;
   }
 
   /** 
@@ -248,9 +249,9 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
   
   /**
-    @dev Setting the address of the lending pool to use
-    @notice This is for using LP and generating interest
-    @param _lendingPool This is the LP address
+    @dev Setting the address of the lending pool to use.
+    @notice This is for using LP and generating interest.
+    @param _lendingPool This is the LP address.
   **/
 
   function setLendingPool(address _lendingPool) external onlyAdmin returns (address) {
@@ -294,29 +295,29 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     if(_tokenAddress == '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'){
       //when exanching ETH use WETH
       //Using the WETH address for the ERC20
-      IERC20Weth(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2).deposit(_balance)
+      IERC20Weth(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2).deposit(_balance);
 
       //Approving the pool for spending our tokens
       //Using de AAVE LP Address 
-      IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2).aprove(_LPAddress, _balance)
+      IERC20Metadata(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2).aprove(_LPAddress, _balance);
 
       //Depositing to the pool
       /**
        address of the token to deposit, amount, address that will be registered the aToken to
       **/
-      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this))
+      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this));
    
     } else {
 
       //Approving the pool for spending our tokens
       //Using de AAVE LP Address 
-      IERC20(_tokenAddress).aprove(_LPAddress, _balance)
+      IERC20Metadata(_tokenAddress).aprove(_LPAddress, _balance);
 
       //Depositing to the pool
       /**
        address of the token to deposit, amount, address that will be registered the aToken to
       **/
-      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this))
+      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this));
     }
   }
 
@@ -349,6 +350,16 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
         //returns aUSDC
         return 0xBcca60bB61934080951369a648Fb03DF4F96263C
       }
+      //Getting Atoken Of TUSD
+      if(_tokenAddress == 0x0000000000085d4780B73119b644AE5ecd22b376){
+        //returns aTUSD
+        return 0x101cc05f4A51C0319f570d5E146a8C625198e636
+      }
+      //Getting Atoken Of BUSD
+      if(_tokenAddress == 0x4Fabb145d64652a948d72533023f6E7A623C7C53){
+        //returns aBUSD
+        return 0xA361718326c15715591c299427c62086F69923D9
+      }
     }
   }
 
@@ -361,12 +372,9 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   **/
 
   function getEarnedInterest(address _ATokenAddresss,uint256 _balance) internal returns(uint256){
-
-    return (IERC20(_ATokenAddress).balanceOf(this)  - _balance)
-
+    return (IERC20(_ATokenAddress).balanceOf(this) - _balance);
   }
   
-
   /**
     @dev Function to add the aggregator to check the chainlink aggregator.
     @param _token This is the token what we want to get the `USD` price.
