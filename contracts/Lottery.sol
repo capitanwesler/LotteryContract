@@ -273,7 +273,11 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
     IUniswapV2Router02(UniswapRouter).swapExactETHForTokens{value: msg.value}
     (1, _path, _msgSender(), block.timestamp + 60);
-    IERC20Metadata(_token).safeTransferFrom(_msgSender(), address(this), _getPriceByToken(_token));
+    IERC20Metadata(_token).safeTransferFrom(
+      _msgSender(), 
+      address(this), 
+      (_getPriceByToken(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) * msg.value.div(1e18)).mul(1e18)
+    );
   }
 
   /**
