@@ -21,6 +21,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   using SafeERC20 for IERC20Metadata;
   address constant EXCHANGE = 0xD1602F68CC7C4c7B59D686243EA35a9C73B0c6a2;
   address constant UniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+  address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
   using SafeMath for uint256; 
 
   /**
@@ -31,20 +32,21 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   uint256 public ticketCost;
 
   /**
+    @dev Balance of the holder after sending the tokens to earn
+    interest.
+  **/
+  uint256 private balanceToken;
+
+  /**
     @dev Lending pool of this week, and what should the user
     swap the coins to.
   **/
   address public lendingPool;
 
   /**
-    @dev Address of the holder of the balance
+    @dev Address of the token that will hold our balance.
   **/
   address public balanceHolderAddress;
-
-  /**
-    @dev Address of the A token holding the balance
-  **/
-  address public aTokenHolderAddress;
 
   /**
     @notice This is the counter for the tickets that we can sell.
@@ -121,6 +123,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @dev This is the seed for the randomNumber.
   **/
   uint256 public seed;
+
 
   /**
     @dev This is to check when a lottery is already running.
@@ -268,32 +271,15 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     balanceHolderAddress = _balanceHolderAddress;
     return _balanceHolderAddress;
   }
-  
-  /**
-    @dev Setting the address of atoken that holds the balance
-    @notice This is for calling the functions of a ERC20 token
-    @param _aTokenHolderAddress This is the token holding the balance
-  **/
-
-  function setATokenholderAddress(address _aTokenHolderAddress) external onlyAdmin returns (address) {
-    aTokenHolderAddress = _aTokenHolderAddress;
-    return _aTokenHolderAddress;
-  }
 
   /**
-    @dev Depositing to the selected pool to earn interest
-    @param _LPAddress Pool to withdraw funds from
-    @param _tokenAddress Token that will be withdrawed address of the underlying asset, not the aToken
+    @dev Withdrawing the funds to the respective token.
+    @param _LPAddress Pool to withdraw funds from.
+    @param _tokenAddress Token that will be withdrawed address of the underlying asset, not the aToken.
   **/
   function withdrawFunds(address _LPAddress, address _tokenAddress, uint256 _balance) public {
-
-    //For Aave Pool
+    // For Aave Pool
     if(_LPAddress == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
-      /**
-      asset: address  of the underlying asset, not the aToken
-      amount: amount deposited, expressed in wei units. 
-      to: address that will receive the asset
-       */
       IAaveLendingPool(_LPAddress).withdraw(_tokenAddress, _balance, address(this));
     }
   }
@@ -307,26 +293,25 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
   function LPDeposit(uint256 _balance, address _LPAddress, address _tokenAddress) internal {
     if(_tokenAddress == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE){
-      IERC20Weth(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2).deposit{value: msg.value}();
+      IERC20Weth(WETH).deposit{value: msg.value}();
 
-      IERC20Metadata(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2).approve(_LPAddress, _balance);
+      IERC20Metadata(WETH).approve(_LPAddress, _balance);
     
-      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this), 1);
+      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this), 0);
     } else {
       IERC20Metadata(_tokenAddress).approve(_LPAddress, _balance);
 
-      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this), 1);
+      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this), 0);
     }
   }
 
-   
   /**
     @dev Getting the earned interest in atoken
     @param _LPAddress Lending Pool address to search for equivalent token
     @param _tokenAddress address of the token being used
   **/
 
-  function getATokenAddress(address _LPAddress,address _tokenAddress) internal returns(address) {
+  function getATokenAddress(address _LPAddress, address _tokenAddress) internal pure returns(address) {
     if(_LPAddress == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
       //Getting Atoken Of DAI
       if(_tokenAddress == 0x6B175474E89094C44Da98b954EedeAC495271d0F) {
@@ -354,6 +339,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
         return 0xA361718326c15715591c299427c62086F69923D9;
       }
     }
+
+    return address(0);
   }
   
   /**
@@ -362,8 +349,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @param _balance total initial balance that was deposited to the contract
   **/
 
-  function getEarnedInterest(address _ATokenAddress, uint256 _balance) internal returns(uint256){
-    return (IERC20(_ATokenAddress).balanceOf(this) - _balance);
+  function getEarnedInterest(address _ATokenAddress, uint256 _balance) internal view returns(uint256){
+    return (IERC20(_ATokenAddress).balanceOf(address(this)) - _balance);
   }
   
   /**
@@ -495,28 +482,64 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     return RandomNumberConsumer(randomNumberConsumer).randomResult();
   }
 
-
   /**
-    @dev This function is going to be shot, after five days to choose the winner
-    of the interest in the pools.
+    @dev This is the function to send the tokens
+    and when is pass the 2 days, it will fullfill
+    to transfers the tokens to the a specific pool.
   **/
 
-  function chooseWinner() internal {
+  function sendTokensToPool() external onlyAdmin {
+    require(statusLottery == LotteryStatus.OPEN, "sendTokensToPool: LOTTERY_NEED_TO_BE_OPEN");
+    Chainlink.Request memory req = buildChainlinkRequest(
+      "0be1216ae9344e7b8e81539939b5ac64", 
+      address(this), 
+      this.fulfill_tokens.selector
+    );
+    req.addUint("until", block.timestamp + 172800);
+    sendChainlinkRequestTo(oracleAddress, req, 1 * 1e18);
+  }
+
+  /** 
+    @dev This functions will fullfill when the timer is done.
+  **/
+
+  function fulfill_tokens(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
     /*
-      @TODO
-      -->
-      Get the interests for that user from the
-      pool that we had the lottery.
+      Add the logic to send all the tokens
+      of one asset to a specific pool of that
+      asset either in COMPOUND pools or AAVE pools.
     */
 
+    balanceToken = IERC20Metadata(balanceHolderAddress).balanceOf(address(this));
+    LPDeposit(IERC20Metadata(balanceHolderAddress).balanceOf(address(this)), lendingPool, balanceHolderAddress);
+
+    _getRandomNumber(seed); /* This is to get the request for getting the randomNumber */
+
+    statusLottery = LotteryStatus.CLOSE;
+    emit StatusOfLottery(statusLottery);
+    
+     Chainlink.Request memory req = buildChainlinkRequest(
+      "0be1216ae9344e7b8e81539939b5ac64", 
+      address(this), 
+      this.fulfill_winner.selector
+    );
+    req.addUint("until", block.timestamp + 472800);
+    sendChainlinkRequestTo(oracleAddress, req, 1 * 1e18);
+  }
+
+  /**
+    @dev This is the function to fullfill to choose the winner.
+  **/
+  function fulfill_winner(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
     for (uint256 i = 0; i < playersCount; i++) {
       if (randomNumber >= players[i].initialBuy && randomNumber <= players[i].endBuy) {
         /*
-          @TODO
-          -->
           Logic for earning the interest to this
           address and giving the admin 5% of fee.
         */
+
+        getEarnedInterest(getATokenAddress(lendingPool, balanceHolderAddress), balanceToken);
+        withdrawFunds(lendingPool, balanceHolderAddress, balanceToken);
 
         emit Winner(players[i].owner, RandomNumberConsumer(randomNumberConsumer).randomResult());
       }
@@ -544,60 +567,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     }
 
     statusLottery = LotteryStatus.OPEN;
-    emit StatusOfLottery(statusLottery);  
-  }
-
-  /**
-    @dev This is the function to send the tokens
-    and when is pass the 2 days, it will fullfill
-    to transfers the tokens to the a specific pool.
-  **/
-
-  function sendTokensToPool() external /* Add modifier who should call */ {
-    require(statusLottery == LotteryStatus.OPEN, "sendTokensToPool: LOTTERY_NEED_TO_BE_OPEN");
-    Chainlink.Request memory req = buildChainlinkRequest(
-      "0be1216ae9344e7b8e81539939b5ac64", 
-      address(this), 
-      this.fulfill_tokens.selector
-    );
-    req.addUint("until", block.timestamp + 172800);
-    sendChainlinkRequestTo(oracleAddress, req, 1 * 1e18);
-  }
-
-  /** 
-    @dev This functions will fullfill when the timer is done.
-  **/
-
-  function fulfill_tokens(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
-    /*
-      @TODO
-      -->
-      Add the logic to send all the tokens
-      of one asset to a specific pool of that
-      asset either in COMPOUND pools or AAVE pools.
-    */
-
-    _getRandomNumber(seed); /* This is to get the request for getting the randomNumber */
-
-    statusLottery = LotteryStatus.CLOSE;
-    emit StatusOfLottery(statusLottery);
-    /*
-      -->
-      After this we can add another delay to choose the winner.
-    */
-     Chainlink.Request memory req = buildChainlinkRequest(
-      "0be1216ae9344e7b8e81539939b5ac64", 
-      address(this), 
-      this.fulfill_winner.selector
-    );
-    req.addUint("until", block.timestamp + 272800);
-    sendChainlinkRequestTo(oracleAddress, req, 1 * 1e18);
-  }
-
-  /**
-    @dev This is the function to fullfill to choose the winner.
-  **/
-  function fulfill_winner(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
-    chooseWinner();
+    emit StatusOfLottery(statusLottery); 
   }
 }
