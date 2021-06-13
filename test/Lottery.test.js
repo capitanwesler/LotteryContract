@@ -3,45 +3,47 @@ const assert = require('assert');
 
 const LINK = '0x514910771AF9Ca656af840dff83E8264EcF986CA';
 const DAI = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
+const USDT = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+const EXCHANGE = '0xD1602F68CC7C4c7B59D686243EA35a9C73B0c6a2';
 
 /*
   This is just to get DAI tokens
   and LINK tokens in the forked mainnet.
 */
 
-describe('Swapping: ETH for Tokens', () => {
-  let swapper;
-  let DAItoken;
-  let LINKtoken;
+// describe('Swapping: ETH for Tokens', () => {
+//   let swapper;
+//   let DAItoken;
+//   let LINKtoken;
 
-  before(async () => {
-    // - Getting the factories for the contracts:
-    const Swapper = await ethers.getContractFactory('Swapper');
+//   before(async () => {
+//     // - Getting the factories for the contracts:
+//     const Swapper = await ethers.getContractFactory('Swapper');
 
-    const accounts = await ethers.getSigners();
+//     const accounts = await ethers.getSigners();
 
-    swapper = await Swapper.deploy(accounts[0].address);
-    await swapper.deployed();
+//     swapper = await Swapper.deploy(accounts[0].address);
+//     await swapper.deployed();
 
-    // DAI TOKEN
-    DAItoken = await ethers.getContractAt('IERC20', DAI);
+//     // DAI TOKEN
+//     DAItoken = await ethers.getContractAt('IERC20', DAI);
 
-    // LINK TOKEN
-    LINKtoken = await ethers.getContractAt('IERC20', LINK);
-  });
+//     // LINK TOKEN
+//     LINKtoken = await ethers.getContractAt('IERC20', LINK);
+//   });
 
-  it('change ETH for multiple tokens', async () => {
-    const porcents = [50 * 10, 50 * 10];
-    const tokens = [
-      '0x6B175474E89094C44Da98b954EedeAC495271d0F', // DAI Token
-      '0x514910771AF9Ca656af840dff83E8264EcF986CA', // LINK Token
-    ];
+//   it('change ETH for multiple tokens', async () => {
+//     const porcents = [50 * 10, 50 * 10];
+//     const tokens = [
+//       '0x6B175474E89094C44Da98b954EedeAC495271d0F', // DAI Token
+//       '0x514910771AF9Ca656af840dff83E8264EcF986CA', // LINK Token
+//     ];
 
-    await swapper.swapEthForTokens(tokens, porcents, {
-      value: ethers.utils.parseEther('5'),
-    });
-  });
-});
+//     await swapper.swapEthForTokens(tokens, porcents, {
+//       value: ethers.utils.parseEther('5'),
+//     });
+//   });
+// });
 
 describe('Testing: Lottery Contract', async () => {
   let accounts;
@@ -50,6 +52,8 @@ describe('Testing: Lottery Contract', async () => {
   let LINKtoken;
   let lottery;
   let alarmClock;
+  let iERC20Dai;
+  let iERC20USDT;
 
   before(async () => {
     // - Getting the factories for the contracts:
@@ -106,127 +110,170 @@ describe('Testing: Lottery Contract', async () => {
     await lottery.deployed();
 
     await LINKtoken.transfer(lottery.address, ethers.utils.parseEther('5'));
+
+    iERC20Dai = await ethers.getContractAt('IERC20', DAI);
+
+    iERC20USDT = await ethers.getContractAt('IERC20', USDT);
+
+    iExchange = await ethers.getContractAt('IExchange', EXCHANGE);
   });
 
-  it('should get the randomResult number from the contract consumer', async () => {
-    const Lottery = await ethers.getContractFactory('Lottery');
-    // - Lottery:
-    const lotteryTest = await upgrades.deployProxy(Lottery, [
-      2,
-      accounts[0].address,
-      500,
-      randomNumber.address,
-      alarmClock.address,
-      45665,
-    ]);
-    await lotteryTest.deployed();
+  // it('should get the randomResult number from the contract consumer', async () => {
+  //   const Lottery = await ethers.getContractFactory('Lottery');
+  //   // - Lottery:
+  //   const lotteryTest = await upgrades.deployProxy(Lottery, [
+  //     2,
+  //     accounts[0].address,
+  //     500,
+  //     randomNumber.address,
+  //     alarmClock.address,
+  //     45665,
+  //   ]);
+  //   await lotteryTest.deployed();
 
-    await LINKtoken.transfer(lotteryTest.address, ethers.utils.parseEther('5'));
-    const tx = await lotteryTest.sendTokensToPool();
+  //   await LINKtoken.transfer(lotteryTest.address, ethers.utils.parseEther('5'));
+  //   const tx = await lotteryTest.sendTokensToPool();
 
-    const requestId = (await tx.wait()).events[0].args.id;
-    const random = Math.floor(Math.random() * 100000);
+  //   const requestId = (await tx.wait()).events[0].args.id;
+  //   const random = Math.floor(Math.random() * 100000);
+
+  //   console.log(
+  //     'Random Number: >> ',
+  //     (await lotteryTest.getRandomNumber()).toString()
+  //   );
+  //   assert.strictEqual((await lotteryTest.getRandomNumber()).toString(), '0');
+
+  //   await alarmClock.fulfillOracleRequest(
+  //     requestId,
+  //     '0x0000000000000000000000000000000000000000000000000000000000000000'
+  //   );
+
+  //   /*
+  //     This is the VRFCoordinator that simulates the
+  //     node calling the callback function.
+  //   */
+  //   await VRFcoordinator.callBackWithRandomness(
+  //     requestId,
+  //     ethers.utils.parseUnits(String(random), 18),
+  //     randomNumber.address
+  //   );
+
+  //   console.log(
+  //     'Random Number: >> ',
+  //     (await lotteryTest.getRandomNumber()).toString()
+  //   );
+  //   assert.notStrictEqual(
+  //     (await lotteryTest.getRandomNumber()).toString(),
+  //     '0'
+  //   );
+  // });
+
+  // it('should add a aggregator to the mapping of aggregators', async () => {
+  //   console.log('Adding the aggregator for ETH...');
+  //   await lottery._addAggregator(
+  //     '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', // Stands for ETH in our Lottery
+  //     '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'
+  //   );
+  //   console.log(
+  //     'Added the aggregator: >> ',
+  //     await lottery.aggregators('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE')
+  //   );
+  //   assert.strictEqual(
+  //     await lottery.aggregators('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'),
+  //     '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'
+  //   );
+  // });
+
+  // it('should remove a aggregator of the mapping of aggregators', async () => {
+  //   console.log(
+  //     'Removing the aggregator: >> ',
+  //     await lottery.aggregators('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE')
+  //   );
+  //   await lottery._removeAggregator(
+  //     '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' // Stands for ETH in our Lottery
+  //   );
+  //   assert.strictEqual(
+  //     await lottery.aggregators('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'),
+  //     '0x0000000000000000000000000000000000000000'
+  //   );
+  // });
+
+  // it('should set the ticket cost, only the admin can do this', async () => {
+  //   console.log('Setting the ticket cost to: >> 3');
+  //   await lottery.setTicketCost(3);
+  //   console.log('TicketCost: >> ', (await lottery.ticketCost()).toString());
+  //   assert.strictEqual('3', (await lottery.ticketCost()).toString());
+  // });
+
+  // it('should add a player to the lottery players mapping', async () => {
+  //   console.log('Buying a tickets for the lottery...');
+  //   await lottery.buyTickets('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 200);
+  //   const player = await lottery.players(0);
+  //   console.log('Who buyed the tickets: >> ', player.owner);
+  //   assert.strictEqual(accounts[0].address, player.owner);
+  //   assert.strictEqual('200', player.quantityTickets.toString());
+  // });
+
+  // it('should revert if a player try to buy more of the max ticket', async () => {
+  //   console.log('Trying to buy out of the max tickets...');
+  //   try {
+  //     await lottery.buyTickets(
+  //       '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+  //       1000
+  //     );
+  //   } catch (error) {
+  //     assert(error);
+  //   }
+  // });
+
+  // it('should change the lottery status when send tokens to pool', async () => {
+  //   console.log(
+  //     'Changing the status of the lottery, sending the tokens to the pool...'
+  //   );
+  //   console.log('StatusOfLottery: >> ', await lottery.statusLottery());
+  //   const requestId = (await (await lottery.sendTokensToPool()).wait())
+  //     .events[0].args.id;
+  //   await alarmClock.fulfillOracleRequest(
+  //     requestId,
+  //     '0x0000000000000000000000000000000000000000000000000000000000000000'
+  //   );
+  //   console.log('StatusOfLottery: >> ', await lottery.statusLottery());
+  // });
+
+  it('should make a swap', async () => {
+    let daiBalance = await iERC20Dai.balanceOf(
+      (
+        await ethers.getSigners()
+      )[0].address
+    );
+
+    const bestRate = await iExchange.get_best_rate(
+      DAI,
+      USDT,
+      ethers.utils.parseEther('200')
+    );
+
+    await iERC20Dai.approve(bestRate[0], ethers.utils.parseEther('210'));
 
     console.log(
-      'Random Number: >> ',
-      (await lotteryTest.getRandomNumber()).toString()
-    );
-    assert.strictEqual((await lotteryTest.getRandomNumber()).toString(), '0');
-
-    await alarmClock.fulfillOracleRequest(
-      requestId,
-      '0x0000000000000000000000000000000000000000000000000000000000000000'
+      (await iERC20Dai.allowance(accounts[0].address, bestRate[0])).toString()
     );
 
-    /*
-      This is the VRFCoordinator that simulates the
-      node calling the callback function.
-    */
-    await VRFcoordinator.callBackWithRandomness(
-      requestId,
-      ethers.utils.parseUnits(String(random), 18),
-      randomNumber.address
-    );
+    await lottery._swap(bestRate[0], ethers.utils.parseEther('200'), 0, 2);
 
+    console.log(bestRate);
+
+    console.log('Current Balance of DAI: >> ', daiBalance.toString());
+    console.log('---------------');
+    daiBalance = await iERC20Dai.balanceOf(
+      (
+        await ethers.getSigners()
+      )[0].address
+    );
+    console.log('Current Contract Balance of Dai: >> ', daiBalance.toString());
     console.log(
-      'Random Number: >> ',
-      (await lotteryTest.getRandomNumber()).toString()
+      'Contract Balance of USDT: >> ',
+      (await iERC20USDT.balanceOf(lottery.address)).toString()
     );
-    assert.notStrictEqual(
-      (await lotteryTest.getRandomNumber()).toString(),
-      '0'
-    );
-  });
-
-  it('should add a aggregator to the mapping of aggregators', async () => {
-    console.log('Adding the aggregator for ETH...');
-    await lottery._addAggregator(
-      '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', // Stands for ETH in our Lottery
-      '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'
-    );
-    console.log(
-      'Added the aggregator: >> ',
-      await lottery.aggregators('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE')
-    );
-    assert.strictEqual(
-      await lottery.aggregators('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'),
-      '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'
-    );
-  });
-
-  it('should remove a aggregator of the mapping of aggregators', async () => {
-    console.log(
-      'Removing the aggregator: >> ',
-      await lottery.aggregators('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE')
-    );
-    await lottery._removeAggregator(
-      '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' // Stands for ETH in our Lottery
-    );
-    assert.strictEqual(
-      await lottery.aggregators('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'),
-      '0x0000000000000000000000000000000000000000'
-    );
-  });
-
-  it('should set the ticket cost, only the admin can do this', async () => {
-    console.log('Setting the ticket cost to: >> 3');
-    await lottery.setTicketCost(3);
-    console.log('TicketCost: >> ', (await lottery.ticketCost()).toString());
-    assert.strictEqual('3', (await lottery.ticketCost()).toString());
-  });
-
-  it('should add a player to the lottery players mapping', async () => {
-    console.log('Buying a tickets for the lottery...');
-    await lottery.buyTickets('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', 200);
-    const player = await lottery.players(0);
-    console.log('Who buyed the tickets: >> ', player.owner);
-    assert.strictEqual(accounts[0].address, player.owner);
-    assert.strictEqual('200', player.quantityTickets.toString());
-  });
-
-  it('should revert if a player try to buy more of the max ticket', async () => {
-    console.log('Trying to buy out of the max tickets...');
-    try {
-      await lottery.buyTickets(
-        '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-        1000
-      );
-    } catch (error) {
-      assert(error);
-    }
-  });
-
-  it('should change the lottery status when send tokens to pool', async () => {
-    console.log(
-      'Changing the status of the lottery, sending the tokens to the pool...'
-    );
-    console.log('StatusOfLottery: >> ', await lottery.statusLottery());
-    const requestId = (await (await lottery.sendTokensToPool()).wait())
-      .events[0].args.id;
-    await alarmClock.fulfillOracleRequest(
-      requestId,
-      '0x0000000000000000000000000000000000000000000000000000000000000000'
-    );
-    console.log('StatusOfLottery: >> ', await lottery.statusLottery());
   });
 });

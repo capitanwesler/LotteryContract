@@ -9,9 +9,11 @@ import "./ChainlinkClientUpgradeable.sol";
 import "./interfaces/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./RandomNumberConsumer.sol";
+import "./interfaces/IStableSwap.sol";
 
 contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeable {
   using Chainlink for Chainlink.Request;
+
   /**
     @dev Using safe math for all the operations with
     uint256.
@@ -244,6 +246,10 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     delete aggregators[_token];
   }
 
+  function _swap(address _pool, uint256 _amount, int128 _from, int128 _to) external {
+    IStableSwap(_pool).exchange_underlying(_from, _to, _amount, 1);
+  }
+
   /** 
     @dev buyTickets function, this will buy the tickets that the
     user desire.
@@ -269,6 +275,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       handling this week.
     */
 
+    
 
     /*
       This means that the _payment address is
