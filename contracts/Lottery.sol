@@ -6,13 +6,14 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./RandomNumberConsumer.sol";
 import "./ChainlinkClientUpgradeable.sol";
-import "./interfaces/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./RandomNumberConsumer.sol";
 import "./interfaces/IStableSwap.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol"; 
 
 contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeable {
   using Chainlink for Chainlink.Request;
+  using SafeERC20 for IERC20;
 
   /**
     @dev Using safe math for all the operations with
@@ -246,7 +247,17 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     delete aggregators[_token];
   }
 
-  function _swap(address _pool, uint256 _amount, int128 _from, int128 _to) external {
+  /**
+    @dev Function to make the swap in curve.fi.
+    @param _pool Address of the pool to make the swap.
+    @param _from Index of the underlying_coin to swap.
+    @param _to Index of the underlying_coin to swap into.
+    @param _token Address of the token to make the transaction of the transferFrom.
+  **/
+
+  function _swap(address _pool, int128 _from, int128 _to, uint256 _amount, address _token) external {
+    IERC20(_token).safeTransferFrom(_msgSender(), address(this), _amount);
+    IERC20(_token).approve(_pool, _amount);
     IStableSwap(_pool).exchange_underlying(_from, _to, _amount, 1);
   }
 
