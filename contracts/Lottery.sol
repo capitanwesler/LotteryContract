@@ -247,7 +247,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     success = true;
   }
 
-  
   /**
     @dev Setting the address of the lending pool to use.
     @notice This is for using LP and generating interest.
@@ -281,43 +280,42 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     return _aTokenHolderAddress;
   }
 
-  
   /**
     @dev Depositing to the selected pool to earn interest
-    @param _balance Balance to deposit inside the poo
-    @param _LPAddress This is the pool that'll generate the interest
-    @param _tokenAddress Token that will be deposited
+    @param _LPAddress Pool to withdraw funds from
+    @param _tokenAddress Token that will be withdrawed address of the underlying asset, not the aToken
+  **/
+  function withdrawFunds(address _LPAddress, address _tokenAddress, uint256 _balance) public {
+
+    //For Aave Pool
+    if(_LPAddress == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
+      /**
+      asset: address  of the underlying asset, not the aToken
+      amount: amount deposited, expressed in wei units. 
+      to: address that will receive the asset
+       */
+      IAaveLendingPool(_LPAddress).withdraw(_tokenAddress, _balance, address(this));
+    }
+  }
+  
+  /**
+    @dev Depositing to the selected pool to earn interest.
+    @param _balance Balance to deposit inside the pool.
+    @param _LPAddress This is the pool that'll generate the interest.
+    @param _tokenAddress Token that will be deposited.
   **/
 
-  ///////////////////////////// WARNING ////////////////
-  //Tested only for aave pool 
-  function LPDeposit(uint256 _balance, address _LPAddress, _tokenAddress) internal {
-    if(_tokenAddress == '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'){
-      //when exanching ETH use WETH
-      //Using the WETH address for the ERC20
-      IERC20Weth(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2).deposit(_balance);
+  function LPDeposit(uint256 _balance, address _LPAddress, address _tokenAddress) internal {
+    if(_tokenAddress == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE){
+      IERC20Weth(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2).deposit{value: msg.value}();
 
-      //Approving the pool for spending our tokens
-      //Using de AAVE LP Address 
-      IERC20Metadata(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2).aprove(_LPAddress, _balance);
-
-      //Depositing to the pool
-      /**
-       address of the token to deposit, amount, address that will be registered the aToken to
-      **/
-      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this));
-   
+      IERC20Metadata(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2).approve(_LPAddress, _balance);
+    
+      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this), 1);
     } else {
+      IERC20Metadata(_tokenAddress).approve(_LPAddress, _balance);
 
-      //Approving the pool for spending our tokens
-      //Using de AAVE LP Address 
-      IERC20Metadata(_tokenAddress).aprove(_LPAddress, _balance);
-
-      //Depositing to the pool
-      /**
-       address of the token to deposit, amount, address that will be registered the aToken to
-      **/
-      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this));
+      IAaveLendingPool(_LPAddress).deposit(_tokenAddress, _balance, address(this), 1);
     }
   }
 
@@ -327,18 +325,13 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @param _LPAddress Lending Pool address to search for equivalent token
     @param _tokenAddress address of the token being used
   **/
+
   function getATokenAddress(address _LPAddress,address _tokenAddress) internal returns(address) {
-    //Using AAVE
     if(_LPAddress == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
       //Getting Atoken Of DAI
       if(_tokenAddress == 0x6B175474E89094C44Da98b954EedeAC495271d0F) {
         //returns aDAI
         return 0x028171bCA77440897B824Ca71D1c56caC55b68A3;
-      }
-      //Getting Atoken Of Link
-      if(_tokenAddress == 0x514910771AF9Ca656af840dff83E8264EcF986CA) {
-        //returns aLink
-        return 0xa06bC25B5805d5F8d82847D191Cb4Af5A3e873E0;
       }
       //Getting Atoken Of USDT
       if(_tokenAddress == 0xdAC17F958D2ee523a2206206994597C13D831ec7) {
@@ -362,8 +355,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       }
     }
   }
-
-
   
   /**
     @dev Getting the earned interest in atoken
@@ -371,7 +362,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @param _balance total initial balance that was deposited to the contract
   **/
 
-  function getEarnedInterest(address _ATokenAddresss,uint256 _balance) internal returns(uint256){
+  function getEarnedInterest(address _ATokenAddress, uint256 _balance) internal returns(uint256){
     return (IERC20(_ATokenAddress).balanceOf(this) - _balance);
   }
   
@@ -585,7 +576,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       of one asset to a specific pool of that
       asset either in COMPOUND pools or AAVE pools.
     */
-    _lendingPool
 
     _getRandomNumber(seed); /* This is to get the request for getting the randomNumber */
 
