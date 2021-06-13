@@ -212,6 +212,10 @@ describe('Testing: Lottery Contract', async () => {
     console.log('Who buyed the tickets: >> ', player.owner);
     assert.strictEqual(accounts[0].address, player.owner);
     assert.strictEqual('200', player.quantityTickets.toString());
+    console.log(
+      'Current contract Balance of USDT: >> ',
+      (await iERC20USDT.balanceOf(lottery.address)).toString()
+    );
   });
 
   it('should revert if a player try to buy more of the max ticket', async () => {

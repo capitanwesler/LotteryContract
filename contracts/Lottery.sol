@@ -325,15 +325,10 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     }
     require(_quantityOfTickets <= maxTicketsPerPlayer, "buyTickets: EXCEED_MAX_TICKETS");
 
-    /*
-      We need to implement the swap
-      to the pool token, that we are
-      handling this week.
-    */
     if (_payment == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
       _swapWithUniswap(_payment);
     } else {
-      _swapWithCurve(0, 1, _amount, _payment, _toSwap);
+      _swapWithCurve(0, 2, _amount, _payment, _toSwap);
     }
     
     if (statusLottery == LotteryStatus.OPEN) {
@@ -380,6 +375,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
   function chooseWinner() internal {
     /*
+      @TODO
       -->
       Get the interests for that user from the
       pool that we had the lottery.
@@ -388,6 +384,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     for (uint256 i = 0; i < playersCount; i++) {
       if (randomNumber >= players[i].initialBuy && randomNumber <= players[i].endBuy) {
         /*
+          @TODO
           -->
           Logic for earning the interest to this
           address and giving the admin 5% of fee.
@@ -445,6 +442,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
   function fulfill_tokens(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
     /*
+      @TODO
       -->
       Add the logic to send all the tokens
       of one asset to a specific pool of that
