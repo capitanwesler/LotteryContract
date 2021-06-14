@@ -106,7 +106,7 @@ describe('Testing: Lottery Contract', async () => {
       alarmClock.address,
       45665,
       '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9',
-      USDT,
+      '0x0000000000000000000000000000000000000000' /* Passing the 0 address, so after we can set it, the balance holder. */,
     ]);
     await lottery.deployed();
 
@@ -128,7 +128,7 @@ describe('Testing: Lottery Contract', async () => {
       alarmClock.address,
       45665,
       '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9',
-      USDT,
+      '0x0000000000000000000000000000000000000000' /* Passing the 0 address, so after we can set it, the balance holder. */,
     ]);
     await lotteryTest.deployed();
 
@@ -168,6 +168,8 @@ describe('Testing: Lottery Contract', async () => {
       '0'
     );
   });
+
+  it('should set a balance holder to receive the tokens');
 
   it('should add a aggregator to the mapping of aggregators', async () => {
     console.log('Adding the aggregator for ETH...');
@@ -234,10 +236,12 @@ describe('Testing: Lottery Contract', async () => {
       'Changing the status of the lottery, sending the tokens to the pool...'
     );
     console.log('StatusOfLottery: >> ', await lottery.statusLottery());
-    const requestId = (await (await lottery.sendTokensToPool()).wait())
-      .events[0].args.id;
+    const tx = await (await lottery.sendTokensToPool()).wait();
+
+    console.log(tx);
+
     await alarmClock.fulfillOracleRequest(
-      requestId,
+      tx.events[0].args.id,
       '0x0000000000000000000000000000000000000000000000000000000000000000'
     );
     console.log('StatusOfLottery: >> ', await lottery.statusLottery());

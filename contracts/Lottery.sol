@@ -277,6 +277,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @param _LPAddress Pool to withdraw funds from.
     @param _tokenAddress Token that will be withdrawed address of the underlying asset, not the aToken.
   **/
+  
   function withdrawFunds(address _LPAddress, address _tokenAddress, uint256 _balance) public {
     // For Aave Pool
     if(_LPAddress == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
@@ -285,7 +286,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   }
 
   /**
-    @dev Getting the earned interest in atoken
+    @dev Getting the earned interest in the AAVE pool, by getting the aToken.
     @param _LPAddress Lending Pool address to search for equivalent token
     @param _tokenAddress address of the token being used
   **/
@@ -354,6 +355,11 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     delete aggregators[_token];
   }
 
+  /**
+    @dev Function to make the swap, for ETH to an StableCoin.
+    @param _token This is the address of the token to receive.
+  **/
+
   function _swapWithUniswap(address _token) payable public {
     /*
       The value in wei, needs to be greater than 1.
@@ -400,7 +406,14 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @param _payment The token that the users want to pay, this can be
     an stable coin or either an ERC20 Token (DAI, LINK).
   **/
-  function buyTickets(address _payment, uint256 _quantityOfTickets, uint256 _amount, address _toSwap) external {
+  function buyTickets(
+    address _payment, 
+    uint256 _quantityOfTickets, 
+    uint256 _amount, 
+    address _toSwap,
+    int128 _indexFrom,
+    int128 _indexTo
+    ) external {
     require(_payment != address(0), "buyTickets: ZERO_ADDRESS");
     if (_payment == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
       require(
@@ -422,7 +435,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     if (_payment == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
       _swapWithUniswap(_payment);
     } else {
-      _swapWithCurve(0, 2, _amount, _payment, _toSwap);
+      _swapWithCurve(_indexFrom, _indexTo, _amount, _payment, _toSwap);
     }
     
     if (statusLottery == LotteryStatus.OPEN) {
@@ -465,21 +478,38 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @dev This is the function to send the tokens
     and when is pass the 2 days, it will fullfill
     to transfers the tokens to the a specific pool.
+    @dev We are using a mock for testing so, be sure
+    to always have the mock.
   **/
 
   function sendTokensToPool() external onlyAdmin {
     require(statusLottery == LotteryStatus.OPEN, "sendTokensToPool: LOTTERY_NEED_TO_BE_OPEN");
+    require(IERC20Metadata(balanceHolderAddress).balanceOf(address(this)) > 0, "sendTokensToPool: NEED_TO_HAVE_BALANCE");
+
+    /*
+      We build the chainlink request,
+      and the function `fulfill_tokens`
+      should be shot after 2 days,
+      with the oracle of CHAINLINK.
+    */
+
     Chainlink.Request memory req = buildChainlinkRequest(
-      "0be1216ae9344e7b8e81539939b5ac64", 
+      "0be1216ae9344e7b8e81539939b5ac64", /* This is the _jobId of CHAINLIN for MAINNET. */
       address(this), 
       this.fulfill_tokens.selector
     );
-    req.addUint("until", block.timestamp + 172800);
+    req.addUint("until", block.timestamp + 172800); /* 2 days in seconds */
     sendChainlinkRequestTo(oracleAddress, req, 1 * 1e18);
   }
 
   /** 
-    @dev This functions will fullfill when the timer is done.
+    @dev This functions will fullfill when  passed two days,
+    this function should be called by the oracle of CHAINLINK.
+
+    @notice If you are testing in a TESTNET, always remember to
+    pass LINK to the oracle to complete the request, in this
+    case we are using a mock, but we still pass in tests LINK
+    to simulate the transaction.
   **/
 
   function fulfill_tokens(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
