@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./RandomNumberConsumer.sol";
 import "./interfaces/IStableSwap.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./interfaces/IExchange.sol";
 import "./interfaces/IAaveLendingPool.sol";
@@ -18,7 +19,7 @@ import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeable {
   using Chainlink for Chainlink.Request;
-  using SafeERC20 for IERC20Metadata;
+  using SafeERC20 for IERC20;
   address constant EXCHANGE = 0xD1602F68CC7C4c7B59D686243EA35a9C73B0c6a2;
   address constant UniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
   address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -378,7 +379,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
     IUniswapV2Router02(UniswapRouter).swapExactETHForTokens{value: msg.value}
     (1, _path, _msgSender(), block.timestamp + 60);
-    IERC20Metadata(_token).safeTransferFrom(
+    IERC20(_token).safeTransferFrom(
       _msgSender(), 
       address(this), 
       (_getPriceByToken(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) * msg.value.div(1e18)).mul(1e18)
@@ -400,8 +401,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       _tokenTo,
       _amount
     );
-    IERC20Metadata(_tokenFrom).safeTransferFrom(_msgSender(), address(this), _amount);
-    IERC20Metadata(_tokenFrom).safeApprove(_pool, _amount);
+    IERC20(_tokenFrom).safeTransferFrom(_msgSender(), address(this), _amount);
+    IERC20(_tokenFrom).safeApprove(_pool, _amount);
     IStableSwap(_pool).exchange_underlying(_from, _to, _amount, 1);
   }
 
@@ -422,14 +423,14 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     require(_payment != address(0), "buyTickets: ZERO_ADDRESS");
     if (_payment == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
       require(
-        _getPriceByToken(_payment) * IERC20Metadata(_payment).balanceOf(_msgSender()).div(1e18)
+        _getPriceByToken(_payment) * IERC20(_payment).balanceOf(_msgSender()).div(1e18)
         >= 
         _quantityOfTickets * ticketCost,
         "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
       );
     } else {
       require(
-        1 * IERC20Metadata(_payment).balanceOf(_msgSender()).div(10 ** IERC20Metadata(_payment).decimals())
+        1 * IERC20(_payment).balanceOf(_msgSender()).div(10 ** IERC20Metadata(_payment).decimals())
         >= 
         _quantityOfTickets * ticketCost,
         "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
@@ -506,7 +507,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
   function sendTokensToPool() external onlyAdmin {
     require(statusLottery == LotteryStatus.OPEN, "sendTokensToPool: LOTTERY_NEED_TO_BE_OPEN");
-    require(IERC20Metadata(balanceHolderAddress).balanceOf(address(this)) > 0, "sendTokensToPool: NEED_TO_HAVE_BALANCE");
+    require(IERC20(balanceHolderAddress).balanceOf(address(this)) > 0, "sendTokensToPool: NEED_TO_HAVE_BALANCE");
 
     /*
       We build the chainlink request,
@@ -541,9 +542,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       asset either in COMPOUND pools or AAVE pools.
     */
 
-    balanceToken = IERC20Metadata(balanceHolderAddress).balanceOf(address(this));
-
-    IERC20Metadata(balanceHolderAddress).safeApprove(lendingPool, balanceToken);
+    IERC20(balanceHolderAddress).safeApprove(lendingPool, IERC20(balanceHolderAddress).balanceOf(address(this)));
 
     IAaveLendingPool(lendingPool).deposit(balanceHolderAddress, balanceToken, address(this), 0);
 
@@ -574,7 +573,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
           address and giving the admin 5% of fee.
         */
 
-        IERC20Metadata(balanceHolderAddress)
+        IERC20(balanceHolderAddress)
           .transfer(
             players[i].owner, 
             (players[i].quantityTickets * ticketCost) + getEarnedInterest(getATokenAddress(lendingPool, balanceHolderAddress), balanceToken)
@@ -582,7 +581,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
         emit Winner(players[i].owner, RandomNumberConsumer(randomNumberConsumer).randomResult());
       } else {
-        IERC20Metadata(balanceHolderAddress)
+        IERC20(balanceHolderAddress)
           .transfer(
             players[i].owner, 
             players[i].quantityTickets * ticketCost
