@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.4;
+pragma solidity 0.6.6;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@chainlink/contracts/src/v0.8/dev/Chainlink.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "@chainlink/contracts/src/v0.6/Chainlink.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/ENSInterface.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/ChainlinkRequestInterface.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/PointerInterface.sol";
-import { ENSResolver as ENSResolver_Chainlink } from "@chainlink/contracts/src/v0.8/vendor/ENSResolver.sol";
+import "@chainlink/contracts/src/v0.6/interfaces/ENSInterface.sol";
+import "@chainlink/contracts/src/v0.6/interfaces/LinkTokenInterface.sol";
+import "@chainlink/contracts/src/v0.6/interfaces/ChainlinkRequestInterface.sol";
+import "@chainlink/contracts/src/v0.6/interfaces/PointerInterface.sol";
+import { ENSResolver as ENSResolver_Chainlink } from "@chainlink/contracts/src/v0.6/vendor/ENSResolver.sol";
 
 contract ChainlinkClientUpgradeable is Initializable, ContextUpgradeable {
   using Chainlink for Chainlink.Request;

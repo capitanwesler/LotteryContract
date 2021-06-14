@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity 0.6.6;
 
-import "@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol";
-import "@chainlink/contracts/src/v0.8/dev/VRFConsumerBase.sol";
+import "@chainlink/contracts/src/v0.6/interfaces/LinkTokenInterface.sol";
+import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
 
 contract VRFCoordinatorMock {
 
@@ -10,7 +10,7 @@ contract VRFCoordinatorMock {
 
     event RandomnessRequest(address indexed sender, bytes32 indexed keyHash, uint256 indexed seed);
 
-    constructor(address linkAddress) {
+    constructor(address linkAddress) public {
         LINK = LinkTokenInterface(linkAddress);
     }
 

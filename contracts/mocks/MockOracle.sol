@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLENCISED
-pragma solidity ^0.8.4;
+pragma solidity 0.6.6;
 
 /**
  * @dev Wrappers over Solidity's arithmetic operations with added overflow
@@ -254,7 +254,7 @@ contract MockOracle is ChainlinkRequestInterface, LinkTokenReceiver {
    */
   constructor(
     address _link
-  )
+  ) public 
   {
     LinkToken = LinkTokenInterface(_link); // external but already deployed and unalterable
   }

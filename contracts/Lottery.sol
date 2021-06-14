@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.4;
+pragma solidity 0.6.6;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
 import "./RandomNumberConsumer.sol";
 import "./ChainlinkClientUpgradeable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./RandomNumberConsumer.sol";
 import "./interfaces/IStableSwap.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./interfaces/IExchange.sol";
 import "./interfaces/IAaveLendingPool.sol";
 import "./interfaces/IERC20Weth.sol";
@@ -430,7 +429,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       );
     } else {
       require(
-        1 * IERC20(_payment).balanceOf(_msgSender()).div(10 ** IERC20Metadata(_payment).decimals())
+        1 * IERC20(_payment).balanceOf(_msgSender()).div(1e18)
         >= 
         _quantityOfTickets * ticketCost,
         "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
@@ -543,8 +542,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     */
 
     IERC20(balanceHolderAddress).safeApprove(lendingPool, IERC20(balanceHolderAddress).balanceOf(address(this)));
-
-    IAaveLendingPool(lendingPool).deposit(balanceHolderAddress, balanceToken, address(this), 0);
+    // IAaveLendingPool(lendingPool).deposit(balanceHolderAddress, IERC20(balanceHolderAddress).balanceOf(address(this)), address(this), 0);
 
     _getRandomNumber(seed); /* This is to get the request for getting the randomNumber */
 
@@ -564,7 +562,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @dev This is the function to fullfill to choose the winner.
   **/
   function fulfill_winner(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
-    withdrawFunds(lendingPool, balanceHolderAddress, type(uint256).max);
+    withdrawFunds(lendingPool, balanceHolderAddress, 2**256-1);
 
     for (uint256 i = 0; i < playersCount; i++) {
       if (randomNumber >= players[i].initialBuy && randomNumber <= players[i].endBuy) {
