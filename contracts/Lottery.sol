@@ -15,6 +15,7 @@ import "./interfaces/IExchange.sol";
 import "./interfaces/IAaveLendingPool.sol";
 import "./interfaces/IERC20Weth.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import "hardhat/console.sol";
 
 contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeable {
   using Chainlink for Chainlink.Request;
@@ -136,7 +137,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   event StatusOfLottery (
     LotteryStatus lottery
   );
-
 
   /** 
     @notice Event for each person who enters in the lottery.
