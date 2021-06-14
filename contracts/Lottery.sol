@@ -467,9 +467,33 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   /** 
     @dev This can be called to get the randomNumber.
   **/
+
   function _getRandomNumber(uint256 _seed) internal {
     bytes32 requestId = RandomNumberConsumer(randomNumberConsumer).getRandomNumber(_seed);
     emit RandomNumber(requestId, _seed);
+  }
+
+  /** 
+    @dev Get the randomNumber.
+  **/
+  function getRandomNumber() external view onlyAdmin returns(uint256) {
+    return RandomNumberConsumer(randomNumberConsumer).randomResult();
+  }
+
+  /** 
+    @dev This can be called to get the randomNumber.
+  **/
+
+  function _getRandomNumberTest(uint256 _seed) external onlyAdmin {
+    bytes32 requestId = RandomNumberConsumer(randomNumberConsumer).getRandomNumber(_seed);
+    emit RandomNumber(requestId, _seed);
+    Chainlink.Request memory req = buildChainlinkRequest(
+      "0be1216ae9344e7b8e81539939b5ac64", 
+      address(this), 
+      this.fulfill_winner.selector
+    );
+    req.addUint("until", block.timestamp + 472800);
+    sendChainlinkRequestTo(oracleAddress, req, 1 * 1e18);
   }
 
   /**
