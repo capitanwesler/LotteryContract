@@ -198,6 +198,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       public 
       initializer
     {
+    __ChainlinkClient_init();
     setPublicChainlinkToken();
     maxTicketsPerPlayer = _ticketsPerPlayer;
     ticketCost = _ticketCost;
