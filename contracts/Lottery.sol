@@ -122,6 +122,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   /**
     @dev This is the seed for the randomNumber.
   **/
+
   uint256 public seed;
 
 
@@ -142,6 +143,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @dev The address for lendingPool is to filter each pool
     and we can see who buyed for a specific pool.
   **/
+
   event LotteryEnter (
     address indexed person,
     uint256 ticketsBuyed,
@@ -160,6 +162,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   /** 
     @notice Event that shot when a winner is chosen.
   **/
+
   event Winner(
     address indexed person,
     uint256 ticketWinner
@@ -168,6 +171,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   /**
     @notice Event that shot when a request is completed.
   **/
+
   event SendingTokens (
     bytes32 requestId
   );
@@ -180,6 +184,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     of the contract, so we can easily choose who's the
     admin and deploy it with those address.
   **/
+
   function initialize(
       uint256 _ticketCost, 
       address _admin, 
@@ -213,28 +218,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   modifier onlyAdmin() {
     require(admin == _msgSender(), "Admin: NOT_ADMIN");
     _;
-  }
-
-  /**
-    @dev Returns the price of a token in USD.
-    @param _tokenPayment Address of the ERC-20 Token.
-  */
-  function _getPriceByToken(address _tokenPayment)
-    public
-    view
-    returns (uint256)
-  {
-    require(
-        aggregators[_tokenPayment] != address(0),
-        "Aggregator: ZERO_ADDRESS"
-    );
-    
-    if (_tokenPayment != aggregators[_tokenPayment]) {
-      (,int256 price,,,) = AggregatorV3Interface(aggregators[_tokenPayment]).latestRoundData();
-      return uint256(price);
-    }
-
-    return 1;
   }
 
   /**
@@ -277,7 +260,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @param _LPAddress Pool to withdraw funds from.
     @param _tokenAddress Token that will be withdrawed address of the underlying asset, not the aToken.
   **/
-  
+
   function withdrawFunds(address _LPAddress, address _tokenAddress, uint256 _balance) public {
     // For Aave Pool
     if(_LPAddress == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
@@ -331,6 +314,28 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
   function getEarnedInterest(address _ATokenAddress, uint256 _balance) internal view returns(uint256){
     return (IERC20(_ATokenAddress).balanceOf(address(this)) - _balance);
+  }
+
+  /**
+    @dev Returns the price of a token in USD.
+    @param _tokenPayment Address of the ERC-20 Token.
+  */
+  function _getPriceByToken(address _tokenPayment)
+    public
+    view
+    returns (uint256)
+  {
+    require(
+        aggregators[_tokenPayment] != address(0),
+        "Aggregator: ZERO_ADDRESS"
+    );
+    
+    if (_tokenPayment != aggregators[_tokenPayment]) {
+      (,int256 price,,,) = AggregatorV3Interface(aggregators[_tokenPayment]).latestRoundData();
+      return uint256(price);
+    }
+
+    return 1;
   }
   
   /**

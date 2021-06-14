@@ -4,6 +4,7 @@ const assert = require('assert');
 const LINK = '0x514910771AF9Ca656af840dff83E8264EcF986CA';
 const DAI = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const USDT = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+const AAVEPool = '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9';
 
 /*
   This is just to get DAI tokens
@@ -105,7 +106,7 @@ describe('Testing: Lottery Contract', async () => {
       randomNumber.address,
       alarmClock.address,
       45665,
-      '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9',
+      '0x0000000000000000000000000000000000000000' /* Passing the 0 address, so after we can set it, the lending pool. */,
       '0x0000000000000000000000000000000000000000' /* Passing the 0 address, so after we can set it, the balance holder. */,
     ]);
     await lottery.deployed();
@@ -127,10 +128,12 @@ describe('Testing: Lottery Contract', async () => {
       randomNumber.address,
       alarmClock.address,
       45665,
-      '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9',
+      '0x0000000000000000000000000000000000000000',
       '0x0000000000000000000000000000000000000000' /* Passing the 0 address, so after we can set it, the balance holder. */,
     ]);
     await lotteryTest.deployed();
+
+    await lotteryTest.setBalanceHolderAddress(DAI);
 
     await LINKtoken.transfer(lotteryTest.address, ethers.utils.parseEther('5'));
     const tx = await lotteryTest.sendTokensToPool();
@@ -169,7 +172,17 @@ describe('Testing: Lottery Contract', async () => {
     );
   });
 
-  it('should set a balance holder to receive the tokens');
+  it('should set a balance holder to receive the tokens', async () => {
+    console.log('Setting the balance holder to: >> ', DAI);
+    await lottery.setBalanceHolderAddress(DAI);
+
+    console.log(
+      'The actual balance holder for asset is: >> ',
+      await lottery.balanceHolderAddress()
+    );
+
+    assert.strictEqual(await lottery.balanceHolderAddress(), DAI);
+  });
 
   it('should add a aggregator to the mapping of aggregators', async () => {
     console.log('Adding the aggregator for ETH...');
