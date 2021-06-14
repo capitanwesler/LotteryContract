@@ -250,7 +250,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @param _balanceHolderAddress This is the token holding the balance
   **/
 
-  function setBalanceholderAddress(address _balanceHolderAddress) external onlyAdmin returns (address) {
+  function setBalanceHolderAddress(address _balanceHolderAddress) external onlyAdmin returns (address) {
     balanceHolderAddress = _balanceHolderAddress;
     return _balanceHolderAddress;
   }
@@ -270,8 +270,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
   /**
     @dev Getting the earned interest in the AAVE pool, by getting the aToken.
-    @param _LPAddress Lending Pool address to search for equivalent token
-    @param _tokenAddress address of the token being used
+    @param _LPAddress Lending Pool address to search for equivalent token.
+    @param _tokenAddress address of the token being used.
   **/
 
   function getATokenAddress(address _LPAddress, address _tokenAddress) internal pure returns(address) {
@@ -470,13 +470,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   function _getRandomNumber(uint256 _seed) internal {
     bytes32 requestId = RandomNumberConsumer(randomNumberConsumer).getRandomNumber(_seed);
     emit RandomNumber(requestId, _seed);
-  }
-  
-  /** 
-    @dev Get the randomNumber.
-  **/
-  function getRandomNumber() external view onlyAdmin returns(uint256) {
-    return RandomNumberConsumer(randomNumberConsumer).randomResult();
   }
 
   /**
