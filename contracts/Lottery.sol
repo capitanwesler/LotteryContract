@@ -276,6 +276,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
           (players[i].quantityTickets * ticketCost).mul(1e18)
         );
       }
+
+      delete players[i];
     }
   }
 
