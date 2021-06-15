@@ -356,12 +356,12 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   
   /**
     @dev Getting the earned interest in atoken
-    @param _ATokenAddress atoken address that's generating the interest
+    @param _token atoken address that's generating the interest
     @param _balance total initial balance that was deposited to the contract
   **/
 
-  function getEarnedInterest(address _ATokenAddress, uint256 _balance) internal view returns(uint256){
-    return (IERC20(_ATokenAddress).balanceOf(address(this)) - _balance);
+  function getEarnedInterest(address _token, uint256 _balance) internal view returns(uint256){
+    return (_balance - IERC20(_token).balanceOf(address(this)));
   }
 
   /**
@@ -578,10 +578,14 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     */
 
     tokenBalance = IERC20(balanceHolderAddress).balanceOf(address(this));
+
     if (lendingPool == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
       IERC20(balanceHolderAddress).safeApprove(lendingPool, IERC20(balanceHolderAddress).balanceOf(address(this)));
       IAaveLendingPool(lendingPool).deposit(balanceHolderAddress, IERC20(balanceHolderAddress).balanceOf(address(this)), address(this), 0);
     } else {
+      console.log("CToken: >> %s", lendingPool);
+      IERC20(balanceHolderAddress).safeApprove(lendingPool, IERC20(balanceHolderAddress).balanceOf(address(this)));
+      console.log("ALLOWANCE OF CTOKEN: >> %s", IERC20(balanceHolderAddress).allowance(address(this), lendingPool));
       ICERC20(lendingPool).mint(IERC20(balanceHolderAddress).balanceOf(address(this)));
       console.log("MINTED BALANCE CTOKEN: >> ", ICERC20(lendingPool).balanceOfUnderlying(address(this)));
     }

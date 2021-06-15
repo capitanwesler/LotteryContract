@@ -134,7 +134,7 @@ describe('Testing: Lottery Contract', async () => {
 
     // - Setting some defaults:
     await lottery.setBalanceHolderAddress(USDT);
-    await lottery.setLendingPool(AAVEPool);
+    await lottery.setLendingPool(addressCToken[1]);
   });
 
   it('should get the randomResult number from the contract consumer', async () => {
@@ -303,27 +303,56 @@ describe('Testing: Lottery Contract', async () => {
       )
     ).wait();
 
-    const iERC20AToken = await ethers.getContractAt(
-      'IERC20',
-      await lottery.getATokenAddress(await lottery.lendingPool(), USDT)
-    );
-    /*
-      Traveling to the future,
-      to see how much interest,
-      we won already in the aToken.
-    */
-    await network.provider.send('evm_increaseTime', [10000000]);
-    await network.provider.send('evm_mine');
-    console.log(
-      'We deposit 200 USDT so we have: >> ',
-      (await iERC20AToken.balanceOf(lottery.address)).toString()
-    );
-    console.log('StatusOfLottery: >> ', await lottery.statusLottery());
-    await alarmClock.fulfillOracleRequest(
-      tx2.events[22].args.requestId,
-      '0x0000000000000000000000000000000000000000000000000000000000000000'
-    );
-    assert.strictEqual(await lottery.statusLottery(), 0);
+    let iERC20AToken;
+    let iERC20CToken;
+
+    if ((await lottery.lendingPool()) === AAVEPool) {
+      iERC20AToken = await ethers.getContractAt(
+        'IERC20',
+        await lottery.getAorCTokenAddress(USDT)
+      );
+
+      /*
+        Traveling to the future,
+        to see how much interest,
+        we won already in the aToken.
+      */
+      await network.provider.send('evm_increaseTime', [10000000]);
+      await network.provider.send('evm_mine');
+      console.log(
+        'We deposit 200 USDT so we have: >> ',
+        (await iERC20AToken.balanceOf(lottery.address)).toString()
+      );
+      console.log('StatusOfLottery: >> ', await lottery.statusLottery());
+      await alarmClock.fulfillOracleRequest(
+        tx2.events[22].args.requestId,
+        '0x0000000000000000000000000000000000000000000000000000000000000000'
+      );
+      assert.strictEqual(await lottery.statusLottery(), 0);
+    } else {
+      iERC20CToken = await ethers.getContractAt(
+        'ICERC20',
+        await lottery.getAorCTokenAddress(await lottery.lendingPool())
+      );
+
+      /*
+        Traveling to the future,
+        to see how much interest,
+        we won already in the aToken.
+      */
+      await network.provider.send('evm_increaseTime', [10000000]);
+      await network.provider.send('evm_mine');
+      console.log(
+        'We deposit 200 USDT so we have: >> ',
+        (await iERC20CToken.balanceOfUnderlying(lottery.address)).toString()
+      );
+      console.log('StatusOfLottery: >> ', await lottery.statusLottery());
+      await alarmClock.fulfillOracleRequest(
+        tx2.events[22].args.requestId,
+        '0x0000000000000000000000000000000000000000000000000000000000000000'
+      );
+      assert.strictEqual(await lottery.statusLottery(), 0);
+    }
   });
 
   it('should make a swap with curve.fi', async () => {
