@@ -287,9 +287,6 @@ describe('Testing: Lottery Contract', async () => {
       tx.events[0].args.id,
       '0x0000000000000000000000000000000000000000000000000000000000000000'
     );
-    lottery.on('WhoIsCalling', function (data) {
-      console.log(data);
-    });
 
     console.log('StatusOfLottery: >> ', await lottery.statusLottery());
   });

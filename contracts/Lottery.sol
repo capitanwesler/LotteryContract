@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.6.6;
 
+import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
@@ -15,7 +16,6 @@ import "./interfaces/IExchange.sol";
 import "./interfaces/IAaveLendingPool.sol";
 import "./interfaces/IERC20Weth.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
-import "hardhat/console.sol";
 
 contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeable {
   using Chainlink for Chainlink.Request;
@@ -23,7 +23,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   address constant EXCHANGE = 0xD1602F68CC7C4c7B59D686243EA35a9C73B0c6a2;
   address constant UniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
   address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-  using SafeMath for uint256; 
+  using SafeMath for uint256;
 
   /**
     @notice This is the `ticketCost` for each lottery
@@ -543,13 +543,18 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     */
 
     IERC20(balanceHolderAddress).safeApprove(lendingPool, IERC20(balanceHolderAddress).balanceOf(address(this)));
-    // IAaveLendingPool(lendingPool).deposit(balanceHolderAddress, IERC20(balanceHolderAddress).balanceOf(address(this)), address(this), 0);
-
+    IAaveLendingPool(lendingPool).deposit(balanceHolderAddress, IERC20(balanceHolderAddress).balanceOf(address(this)), address(this), 0);
     _getRandomNumber(seed); /* This is to get the request for getting the randomNumber */
+
+    console.log("ADDRESS Holder: >> %s", balanceHolderAddress);
+    console.log("BALANCE Holder: >> %s", IERC20(balanceHolderAddress).balanceOf(address(this)));
+    console.log("ADDRESS aToken: >> %s", getATokenAddress(lendingPool, balanceHolderAddress));
+    console.log("BALANCE aToken: >> %s", IERC20(getATokenAddress(lendingPool, balanceHolderAddress)).balanceOf(address(this)));
 
     statusLottery = LotteryStatus.CLOSE;
     emit StatusOfLottery(statusLottery);
     
+    console.log("Passing and not reverting at this point");
     Chainlink.Request memory req = buildChainlinkRequest(
       "0be1216ae9344e7b8e81539939b5ac64", 
       address(this), 
@@ -564,6 +569,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   **/
   function fulfill_winner(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
     withdrawFunds(lendingPool, balanceHolderAddress, 2**256-1);
+
+    console.log("FULFILL WINNER");
 
     for (uint256 i = 0; i < playersCount; i++) {
       if (randomNumber >= players[i].initialBuy && randomNumber <= players[i].endBuy) {
