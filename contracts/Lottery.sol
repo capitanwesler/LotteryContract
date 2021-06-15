@@ -477,12 +477,21 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
         "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
       );
     } else {
-      require(
-        1 * IERC20(_payment).balanceOf(_msgSender()).div(1e8)
-        >= 
-        _quantityOfTickets * ticketCost,
-        "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
-      );
+      if (_payment == 0x6B175474E89094C44Da98b954EedeAC495271d0F) {
+        require(
+          1 * IERC20(_payment).balanceOf(_msgSender()).div(1e18)
+          >= 
+          _quantityOfTickets * ticketCost,
+          "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
+        );
+      } else {
+        require(
+          1 * IERC20(_payment).balanceOf(_msgSender()).div(1e8)
+          >= 
+          _quantityOfTickets * ticketCost,
+          "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
+        );
+      }
     }
     require(_quantityOfTickets <= maxTicketsPerPlayer, "buyTickets: EXCEED_MAX_TICKETS");
 

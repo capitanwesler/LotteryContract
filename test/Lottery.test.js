@@ -4,6 +4,7 @@ const assert = require('assert');
 const LINK = '0x514910771AF9Ca656af840dff83E8264EcF986CA';
 const DAI = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const USDT = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+const USDC = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
 const AAVEPool = '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9';
 const addressIndexes = {
   '0x6B175474E89094C44Da98b954EedeAC495271d0F': 0, // DAI
@@ -47,15 +48,16 @@ describe('Swapping: ETH for Tokens', () => {
   });
 
   it('change ETH for multiple tokens for the first account', async () => {
-    const porcents = [35 * 10, 35 * 10, 30 * 10];
+    const porcents = [35 * 10, 35 * 10, 15 * 10, 15 * 10];
     const tokens = [
       '0x6B175474E89094C44Da98b954EedeAC495271d0F', // DAI Token
       '0x514910771AF9Ca656af840dff83E8264EcF986CA', // LINK Token
       '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT Token
+      '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC Token
     ];
 
     await swapper.connect(account1).swapEthForTokens(tokens, porcents, {
-      value: ethers.utils.parseEther('50'),
+      value: ethers.utils.parseEther('200'),
     });
   });
 });
@@ -410,29 +412,30 @@ describe('Testing: Lottery Contract', async () => {
 
     await lotteryTest.setLendingPool(addressCToken[0]);
 
-    await iERC20USDT.approve(
+    const iERC20USDC = await ethers.getContractAt(
+      'IERC20',
+      '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+    );
+
+    await iERC20USDC.approve(
       lotteryTest.address,
-      ethers.utils.parseEther('200')
+      ethers.utils.parseEther('120')
     );
 
     await LINKtoken.transfer(lotteryTest.address, ethers.utils.parseEther('5'));
 
     await lotteryTest.buyTickets(
-      USDT,
-      200,
-      ethers.utils.parseEther('200'),
+      USDC,
+      100,
+      ethers.utils.parseUnits('100', 8),
       DAI,
-      addressIndexes[USDT],
+      addressIndexes[USDC],
       addressIndexes[DAI]
     );
 
     const tx = await (await lotteryTest.sendTokensToPool()).wait();
-    console.log(tx);
-
-    await alarmClock.fulfillOracleRequest(
-      requestId,
-      '0x0000000000000000000000000000000000000000000000000000000000000000'
-    );
+    const requestId = tx.events[0].args.id;
+    const random = Math.floor(Math.random() * 100000);
 
     /*
       This is the VRFCoordinator that simulates the
@@ -449,35 +452,37 @@ describe('Testing: Lottery Contract', async () => {
       (await lotteryTest.getRandomNumber()).toString()
     );
     assert(Number((await lotteryTest.getRandomNumber()).toString()) > 0);
+    const tx2 = await (
+      await alarmClock.fulfillOracleRequest(
+        requestId,
+        '0x0000000000000000000000000000000000000000000000000000000000000000'
+      )
+    ).wait();
+
+    const iERC20CToken = await ethers.getContractAt(
+      'ICERC20',
+      addressCToken[0]
+    );
+
+    /*
+        Traveling to the future,
+        to see how much interest,
+        we won already in the aToken.
+      */
+    console.log(
+      'CToken before: >> ',
+      (await iERC20CToken.balanceOfUnderlying(lotteryTest.address)).toString()
+    );
+    await network.provider.send('evm_increaseTime', [100000]);
+    await network.provider.send('evm_mine');
+    console.log(
+      'CToken after: >> ',
+      (await iERC20CToken.balanceOfUnderlying(lotteryTest.address)).toString()
+    );
+
+    await alarmClock.fulfillOracleRequest(
+      tx2.events[15].args.requestId,
+      '0x0000000000000000000000000000000000000000000000000000000000000000'
+    );
   });
-
-  // it('should make a swap with uniswap', async () => {
-  //   let daiBalance = await iERC20Dai.balanceOf(
-  //     (
-  //       await ethers.getSigners()
-  //     )[0].address
-  //   );
-
-  //   console.log('Initial balance of DAI: >> ', daiBalance.toString());
-  //   await lottery._addAggregator(
-  //     '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-  //     '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'
-  //   );
-
-  //   console.log(
-  //     await lottery.aggregators('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE')
-  //   );
-
-  //   await lottery._swapWithUniswap(DAI, {
-  //     value: ethers.utils.parseEther('2'),
-  //   });
-
-  //   daiBalance = await iERC20Dai.balanceOf(
-  //     (
-  //       await ethers.getSigners()
-  //     )[0].address
-  //   );
-
-  //   console.log('End balance of DAI: >> ', daiBalance.toString());
-  // });
 });
