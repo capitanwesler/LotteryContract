@@ -55,7 +55,7 @@ describe('Swapping: ETH for Tokens', () => {
     ];
 
     await swapper.connect(account1).swapEthForTokens(tokens, porcents, {
-      value: ethers.utils.parseEther('3'),
+      value: ethers.utils.parseEther('50'),
     });
   });
 });
@@ -134,7 +134,7 @@ describe('Testing: Lottery Contract', async () => {
 
     // - Setting some defaults:
     await lottery.setBalanceHolderAddress(USDT);
-    await lottery.setLendingPool(addressCToken[1]);
+    await lottery.setLendingPool(AAVEPool);
   });
 
   it('should get the randomResult number from the contract consumer', async () => {
@@ -330,25 +330,26 @@ describe('Testing: Lottery Contract', async () => {
       );
       assert.strictEqual(await lottery.statusLottery(), 0);
     } else {
-      iERC20CToken = await ethers.getContractAt(
-        'ICERC20',
-        await lottery.getAorCTokenAddress(await lottery.lendingPool())
-      );
+      iERC20CToken = await ethers.getContractAt('ICERC20', addressCToken[1]);
 
       /*
         Traveling to the future,
         to see how much interest,
         we won already in the aToken.
       */
-      await network.provider.send('evm_increaseTime', [10000000]);
+      console.log(
+        'CToken before: >> ',
+        (await iERC20CToken.balanceOfUnderlying(lottery.address)).toString()
+      );
+      await network.provider.send('evm_increaseTime', [100000]);
       await network.provider.send('evm_mine');
       console.log(
-        'We deposit 200 USDT so we have: >> ',
+        'CToken after: >> ',
         (await iERC20CToken.balanceOfUnderlying(lottery.address)).toString()
       );
       console.log('StatusOfLottery: >> ', await lottery.statusLottery());
       await alarmClock.fulfillOracleRequest(
-        tx2.events[22].args.requestId,
+        tx2.events[15].args.requestId,
         '0x0000000000000000000000000000000000000000000000000000000000000000'
       );
       assert.strictEqual(await lottery.statusLottery(), 0);
@@ -387,6 +388,67 @@ describe('Testing: Lottery Contract', async () => {
     assert(
       Number((await iERC20USDT.balanceOf(lottery.address)).toString()) > 0
     );
+  });
+
+  it('should earn interest in the compound cToken of DAI', async () => {
+    const Lottery = await ethers.getContractFactory('Lottery');
+
+    // - Lottery:
+    const lotteryTest = await upgrades.deployProxy(Lottery, [
+      1,
+      accounts[0].address,
+      500,
+      randomNumber.address,
+      alarmClock.address,
+      45665,
+      '0x0000000000000000000000000000000000000000',
+      '0x0000000000000000000000000000000000000000' /* Passing the 0 address, so after we can set it, the balance holder. */,
+    ]);
+    await lotteryTest.deployed();
+
+    await lotteryTest.setBalanceHolderAddress(DAI);
+
+    await lotteryTest.setLendingPool(addressCToken[0]);
+
+    await iERC20USDT.approve(
+      lotteryTest.address,
+      ethers.utils.parseEther('200')
+    );
+
+    await LINKtoken.transfer(lotteryTest.address, ethers.utils.parseEther('5'));
+
+    await lotteryTest.buyTickets(
+      USDT,
+      200,
+      ethers.utils.parseEther('200'),
+      DAI,
+      addressIndexes[USDT],
+      addressIndexes[DAI]
+    );
+
+    const tx = await (await lotteryTest.sendTokensToPool()).wait();
+    console.log(tx);
+
+    await alarmClock.fulfillOracleRequest(
+      requestId,
+      '0x0000000000000000000000000000000000000000000000000000000000000000'
+    );
+
+    /*
+      This is the VRFCoordinator that simulates the
+      node calling the callback function.
+    */
+    await VRFcoordinator.callBackWithRandomness(
+      requestId,
+      ethers.utils.parseUnits(String(random), 18),
+      randomNumber.address
+    );
+
+    console.log(
+      'Random Number: >> ',
+      (await lotteryTest.getRandomNumber()).toString()
+    );
+    assert(Number((await lotteryTest.getRandomNumber()).toString()) > 0);
   });
 
   // it('should make a swap with uniswap', async () => {

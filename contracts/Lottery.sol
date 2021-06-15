@@ -292,7 +292,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     if(lendingPool == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
       IAaveLendingPool(lendingPool).withdraw(_tokenAddress, ~uint256(0), address(this));
     } else {
-      ICERC20(lendingPool).redeem(ICERC20(lendingPool).balanceOfUnderlying(address(this)));
+      ICERC20(lendingPool).redeemUnderlying(ICERC20(lendingPool).balanceOfUnderlying(address(this)));
     }
   }
 
@@ -478,7 +478,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       );
     } else {
       require(
-        1 * IERC20(_payment).balanceOf(_msgSender()).div(1e18)
+        1 * IERC20(_payment).balanceOf(_msgSender()).div(1e8)
         >= 
         _quantityOfTickets * ticketCost,
         "buyTickets: NOT_ENOUGH_MONEY_TO_BUY"
@@ -583,11 +583,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       IERC20(balanceHolderAddress).safeApprove(lendingPool, IERC20(balanceHolderAddress).balanceOf(address(this)));
       IAaveLendingPool(lendingPool).deposit(balanceHolderAddress, IERC20(balanceHolderAddress).balanceOf(address(this)), address(this), 0);
     } else {
-      console.log("CToken: >> %s", lendingPool);
       IERC20(balanceHolderAddress).safeApprove(lendingPool, IERC20(balanceHolderAddress).balanceOf(address(this)));
-      console.log("ALLOWANCE OF CTOKEN: >> %s", IERC20(balanceHolderAddress).allowance(address(this), lendingPool));
       ICERC20(lendingPool).mint(IERC20(balanceHolderAddress).balanceOf(address(this)));
-      console.log("MINTED BALANCE CTOKEN: >> ", ICERC20(lendingPool).balanceOfUnderlying(address(this)));
     }
     _getRandomNumber(seed); /* This is to get the request for getting the randomNumber */
 
