@@ -262,10 +262,10 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @param _tokenAddress Token that will be withdrawed address of the underlying asset, not the aToken.
   **/
 
-  function withdrawFunds(address _LPAddress, address _tokenAddress, uint256 _balance) public {
+  function withdrawFunds(address _LPAddress, address _tokenAddress) public {
     // For Aave Pool
     if(_LPAddress == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
-      IAaveLendingPool(_LPAddress).withdraw(_tokenAddress, _balance, address(this));
+      IAaveLendingPool(_LPAddress).withdraw(_tokenAddress, ~uint256(0), address(this));
     }
   }
 
@@ -275,7 +275,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @param _tokenAddress address of the token being used.
   **/
 
-  function getATokenAddress(address _LPAddress, address _tokenAddress) internal pure returns(address) {
+  function getATokenAddress(address _LPAddress, address _tokenAddress) public pure returns(address) {
     if(_LPAddress == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
       //Getting Atoken Of DAI
       if(_tokenAddress == 0x6B175474E89094C44Da98b954EedeAC495271d0F) {
@@ -546,15 +546,9 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     IAaveLendingPool(lendingPool).deposit(balanceHolderAddress, IERC20(balanceHolderAddress).balanceOf(address(this)), address(this), 0);
     _getRandomNumber(seed); /* This is to get the request for getting the randomNumber */
 
-    console.log("ADDRESS Holder: >> %s", balanceHolderAddress);
-    console.log("BALANCE Holder: >> %s", IERC20(balanceHolderAddress).balanceOf(address(this)));
-    console.log("ADDRESS aToken: >> %s", getATokenAddress(lendingPool, balanceHolderAddress));
-    console.log("BALANCE aToken: >> %s", IERC20(getATokenAddress(lendingPool, balanceHolderAddress)).balanceOf(address(this)));
-
     statusLottery = LotteryStatus.CLOSE;
     emit StatusOfLottery(statusLottery);
     
-    console.log("Passing and not reverting at this point");
     Chainlink.Request memory req = buildChainlinkRequest(
       "0be1216ae9344e7b8e81539939b5ac64", 
       address(this), 
@@ -568,9 +562,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @dev This is the function to fullfill to choose the winner.
   **/
   function fulfill_winner(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
-    withdrawFunds(lendingPool, balanceHolderAddress, 2**256-1);
-
-    console.log("FULFILL WINNER");
+    withdrawFunds(lendingPool, balanceHolderAddress);
 
     for (uint256 i = 0; i < playersCount; i++) {
       if (randomNumber >= players[i].initialBuy && randomNumber <= players[i].endBuy) {
