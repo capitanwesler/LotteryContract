@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.6;
 
-interface CERC20 {
+interface ICERC20 {
    
     /**
-     * @notice Gets the balance of the specified address
+     * @notice Gets the balance of the specified address.
      * @param owner The address from which the balance will be retrieved
      * @return balance The balance
      */
-    function balanceOf(address owner) external view returns (uint256 balance);
+    function balanceOfUnderlying(address owner) external view returns (uint256);
 
     /**
       * @notice Approve `spender` to transfer up to `amount` from `src`
@@ -20,22 +20,11 @@ interface CERC20 {
       */
     function approve(address spender, uint256 amount) external returns (bool success);
 
-
-    /**
-      * @notice Get the current allowance from `owner` for `spender`
-      * @param owner The address of the account which owns the tokens to be spent
-      * @param spender The address of the account which may transfer tokens
-      * @return remaining The number of tokens allowed to be spent
-      */
-    function allowance(address owner, address spender) external view returns (uint256 remaining);
-
-
     /**
      * @notice Sender supplies assets into the market and receives cTokens in exchange
      * @dev Reverts upon any failure
      */
-    function mint() external payable;
-
+    function mint(uint mintAmount) external returns (uint);
 
 
     /**

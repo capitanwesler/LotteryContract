@@ -14,6 +14,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IExchange.sol";
 import "./interfaces/IAaveLendingPool.sol";
+import "./interfaces/ICERC20.sol";
 import "./interfaces/IERC20Weth.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
@@ -283,25 +284,25 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
   /**
     @dev Withdrawing the funds to the respective token.
-    @param _LPAddress Pool to withdraw funds from.
     @param _tokenAddress Token that will be withdrawed address of the underlying asset, not the aToken.
   **/
 
-  function withdrawFunds(address _LPAddress, address _tokenAddress) public {
+  function withdrawFunds(address _tokenAddress) public {
     // For Aave Pool
-    if(_LPAddress == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
-      IAaveLendingPool(_LPAddress).withdraw(_tokenAddress, ~uint256(0), address(this));
+    if(lendingPool == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
+      IAaveLendingPool(lendingPool).withdraw(_tokenAddress, ~uint256(0), address(this));
+    } else {
+      ICERC20(lendingPool).redeem(ICERC20(lendingPool).balanceOfUnderlying(address(this)));
     }
   }
 
   /**
-    @dev Getting the earned interest in the AAVE pool, by getting the aToken.
-    @param _LPAddress Lending Pool address to search for equivalent token.
+    @dev Getting the earned interest in the AAVE pool, by getting the aToken or Getting the cToken
     @param _tokenAddress address of the token being used.
   **/
 
-  function getATokenAddress(address _LPAddress, address _tokenAddress) public pure returns(address) {
-    if(_LPAddress == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
+  function getAorCTokenAddress(address _tokenAddress) public view returns(address) {
+    if(lendingPool == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
       //Getting Atoken Of DAI
       if(_tokenAddress == 0x6B175474E89094C44Da98b954EedeAC495271d0F) {
         //returns aDAI
@@ -326,6 +327,27 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       if(_tokenAddress == 0x4Fabb145d64652a948d72533023f6E7A623C7C53) {
         //returns aBUSD
         return 0xA361718326c15715591c299427c62086F69923D9;
+      }
+    } else {
+      //Getting cToken Of cDAI
+      if(_tokenAddress == 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643) {
+        //returns DAI
+        return 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+      }
+      //Getting cToken Of cUSDT
+      if(_tokenAddress == 0xf650C3d88D12dB855b8bf7D11Be6C55A4e07dCC9) {
+        //returns USDT
+        return 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+      }
+      //Getting cToken Of cUSDC
+      if(_tokenAddress == 0x39AA39c021dfbaE8faC545936693aC917d5E7563){
+        //returns USDC
+        return 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+      }
+      //Getting cToken Of cTUSD
+      if(_tokenAddress == 0x12392F67bdf24faE0AF363c24aC620a2f67DAd86) {
+        //returns TUSD
+        return 0x0000000000085d4780B73119b644AE5ecd22b376;
       }
     }
 
@@ -556,8 +578,13 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     */
 
     tokenBalance = IERC20(balanceHolderAddress).balanceOf(address(this));
-    IERC20(balanceHolderAddress).safeApprove(lendingPool, IERC20(balanceHolderAddress).balanceOf(address(this)));
-    IAaveLendingPool(lendingPool).deposit(balanceHolderAddress, IERC20(balanceHolderAddress).balanceOf(address(this)), address(this), 0);
+    if (lendingPool == 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9) {
+      IERC20(balanceHolderAddress).safeApprove(lendingPool, IERC20(balanceHolderAddress).balanceOf(address(this)));
+      IAaveLendingPool(lendingPool).deposit(balanceHolderAddress, IERC20(balanceHolderAddress).balanceOf(address(this)), address(this), 0);
+    } else {
+      ICERC20(lendingPool).mint(IERC20(balanceHolderAddress).balanceOf(address(this)));
+      console.log("MINTED BALANCE CTOKEN: >> ", ICERC20(lendingPool).balanceOfUnderlying(address(this)));
+    }
     _getRandomNumber(seed); /* This is to get the request for getting the randomNumber */
 
     statusLottery = LotteryStatus.CLOSE;
@@ -576,7 +603,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @dev This is the function to fullfill to choose the winner.
   **/
   function fulfill_winner(bytes32 _requestId) external recordChainlinkFulfillment(_requestId) {
-    withdrawFunds(lendingPool, balanceHolderAddress);
+    withdrawFunds(balanceHolderAddress);
 
     for (uint256 i = 0; i < playersCount; i++) {
       if (
@@ -595,7 +622,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
             (players[i].quantityTickets * ticketCost).mul(1e18)
             + 
             getEarnedInterest(
-              getATokenAddress(lendingPool, balanceHolderAddress), 
+              getAorCTokenAddress(balanceHolderAddress), 
               tokenBalance
             )
           );
