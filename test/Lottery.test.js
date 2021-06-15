@@ -6,11 +6,11 @@ const DAI = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const USDT = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
 const AAVEPool = '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9';
 const addressIndexes = {
-  "0x6B175474E89094C44Da98b954EedeAC495271d0F": 0,
-  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": 1,
-  "0xdAC17F958D2ee523a2206206994597C13D831ec7": 2,
-  "0x4Fabb145d64652a948d72533023f6E7A623C7C53": 3,
-  "0x0000000000085d4780B73119b644AE5ecd22b376": 3,
+  '0x6B175474E89094C44Da98b954EedeAC495271d0F': 0,
+  '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48': 1,
+  '0xdAC17F958D2ee523a2206206994597C13D831ec7': 2,
+  '0x4Fabb145d64652a948d72533023f6E7A623C7C53': 3,
+  '0x0000000000085d4780B73119b644AE5ecd22b376': 3,
 };
 
 /*
@@ -148,11 +148,25 @@ describe('Testing: Lottery Contract', async () => {
 
     await lotteryTest.setBalanceHolderAddress(USDT);
 
+    await iERC20Dai.approve(
+      lotteryTest.address,
+      ethers.utils.parseEther('200')
+    );
+
     await LINKtoken.transfer(lotteryTest.address, ethers.utils.parseEther('5'));
 
-    const tx = await lotteryTest._getRandomNumberTest(1235);
+    await lotteryTest.buyTickets(
+      DAI,
+      200,
+      ethers.utils.parseEther('200'),
+      USDT,
+      0,
+      2
+    );
 
-    const requestId = (await tx.wait()).events[4].args.id;
+    const tx = await (await lotteryTest.sendTokensToPool()).wait();
+
+    const requestId = tx.events[0].args.id;
     const random = Math.floor(Math.random() * 100000);
 
     console.log(
@@ -180,10 +194,7 @@ describe('Testing: Lottery Contract', async () => {
       'Random Number: >> ',
       (await lotteryTest.getRandomNumber()).toString()
     );
-    assert.notStrictEqual(
-      (await lotteryTest.getRandomNumber()).toString(),
-      '0'
-    );
+    assert(Number((await lotteryTest.getRandomNumber()).toString()) > 0);
   });
 
   it('should set a balance holder to receive the tokens', async () => {
@@ -278,22 +289,33 @@ describe('Testing: Lottery Contract', async () => {
     );
     console.log('StatusOfLottery: >> ', await lottery.statusLottery());
     const tx = await (await lottery.sendTokensToPool()).wait();
-    const tx2 = await (await alarmClock.fulfillOracleRequest(
-      tx.events[0].args.id,
-      '0x0000000000000000000000000000000000000000000000000000000000000000'
-    )).wait();
-      
-    const iERC20AToken = await ethers.getContractAt('IERC20', await lottery.getATokenAddress(await lottery.lendingPool(), USDT));
+    const tx2 = await (
+      await alarmClock.fulfillOracleRequest(
+        tx.events[0].args.id,
+        '0x0000000000000000000000000000000000000000000000000000000000000000'
+      )
+    ).wait();
+
+    const iERC20AToken = await ethers.getContractAt(
+      'IERC20',
+      await lottery.getATokenAddress(await lottery.lendingPool(), USDT)
+    );
     /*
       Traveling to the future,
       to see how much interest,
       we won already in the aToken.
     */
-    await network.provider.send("evm_increaseTime", [10000000]);
-    await network.provider.send("evm_mine");
-    console.log("We deposit 200 USDT so we have: >> ", (await iERC20AToken.balanceOf(lottery.address)).toString());
+    await network.provider.send('evm_increaseTime', [10000000]);
+    await network.provider.send('evm_mine');
+    console.log(
+      'We deposit 200 USDT so we have: >> ',
+      (await iERC20AToken.balanceOf(lottery.address)).toString()
+    );
     console.log('StatusOfLottery: >> ', await lottery.statusLottery());
-    await alarmClock.fulfillOracleRequest(tx2.events[22].args.requestId, '0x0000000000000000000000000000000000000000000000000000000000000000');
+    await alarmClock.fulfillOracleRequest(
+      tx2.events[22].args.requestId,
+      '0x0000000000000000000000000000000000000000000000000000000000000000'
+    );
     assert.strictEqual(await lottery.statusLottery(), 0);
   });
 
@@ -326,7 +348,9 @@ describe('Testing: Lottery Contract', async () => {
       'Current contract Balance of USDT: >> ',
       (await iERC20USDT.balanceOf(lottery.address)).toString()
     );
-    assert.strictEqual((await iERC20USDT.balanceOf(lottery.address)).toString(), '200088823');
+    assert(
+      Number((await iERC20USDT.balanceOf(lottery.address)).toString()) > 0
+    );
   });
 
   // it('should make a swap with uniswap', async () => {

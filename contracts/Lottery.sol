@@ -126,6 +126,11 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
 
   uint256 public seed;
 
+  /**
+    @dev This is going to be the token balance that we are holding.
+  **/
+  uint256 private tokenBalance;
+
 
   /**
     @dev This is to check when a lottery is already running.
@@ -204,8 +209,8 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     ticketCost = _ticketCost;
     admin = _admin;
     randomNumberConsumer = _randomNumberConsumer;
-    supplyTickets = 2**256 - 1;
-    supplyTicketsRunning = 2**256 - 1;
+    supplyTickets = ~uint256(0);
+    supplyTicketsRunning = ~uint256(0);
     statusLottery = LotteryStatus.OPEN;
     seed = _seed;
     oracleAddress = _oracleAddress;
@@ -366,6 +371,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     @param _token This is the address of the token to receive.
   **/
 
+  // @TODO Fix this function
   function _swapWithUniswap(address _token) payable public {
     /*
       The value in wei, needs to be greater than 1.
@@ -439,6 +445,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     require(_quantityOfTickets <= maxTicketsPerPlayer, "buyTickets: EXCEED_MAX_TICKETS");
 
     if (_payment == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) {
+      // @TODO Handle this function, when the user is paying with ETHER
       _swapWithUniswap(_payment);
     } else {
       _swapWithCurve(_indexFrom, _indexTo, _amount, _payment, _toSwap);
@@ -449,6 +456,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       players[playersCount].initialBuy = supplyTickets;
       players[playersCount].endBuy = supplyTickets - _quantityOfTickets;
       players[playersCount].quantityTickets = _quantityOfTickets;
+      supplyTickets = supplyTickets - _quantityOfTickets;
       playersCount++;
 
       emit LotteryEnter(_msgSender(), _quantityOfTickets, address(0));
@@ -459,6 +467,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       playersRunning[playersRunningCount].initialBuy = supplyTicketsRunning;
       playersRunning[playersRunningCount].endBuy = supplyTicketsRunning - _quantityOfTickets;
       playersRunning[playersRunningCount].quantityTickets = _quantityOfTickets;
+      supplyTicketsRunning = supplyTicketsRunning - _quantityOfTickets;
       playersRunningCount++;
 
       emit LotteryEnter(_msgSender(), _quantityOfTickets, address(0));
@@ -479,22 +488,6 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   **/
   function getRandomNumber() external view onlyAdmin returns(uint256) {
     return RandomNumberConsumer(randomNumberConsumer).randomResult();
-  }
-
-  /** 
-    @dev This can be called to get the randomNumber.
-  **/
-
-  function _getRandomNumberTest(uint256 _seed) external onlyAdmin {
-    bytes32 requestId = RandomNumberConsumer(randomNumberConsumer).getRandomNumber(_seed);
-    emit RandomNumber(requestId, _seed);
-    Chainlink.Request memory req = buildChainlinkRequest(
-      "0be1216ae9344e7b8e81539939b5ac64", 
-      address(this), 
-      this.fulfill_winner.selector
-    );
-    req.addUint("until", block.timestamp + 472800);
-    sendChainlinkRequestTo(oracleAddress, req, 1 * 1e18);
   }
 
   /**
@@ -542,6 +535,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       asset either in COMPOUND pools or AAVE pools.
     */
 
+    tokenBalance = IERC20(balanceHolderAddress).balanceOf(address(this));
     IERC20(balanceHolderAddress).safeApprove(lendingPool, IERC20(balanceHolderAddress).balanceOf(address(this)));
     IAaveLendingPool(lendingPool).deposit(balanceHolderAddress, IERC20(balanceHolderAddress).balanceOf(address(this)), address(this), 0);
     _getRandomNumber(seed); /* This is to get the request for getting the randomNumber */
@@ -565,7 +559,11 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     withdrawFunds(lendingPool, balanceHolderAddress);
 
     for (uint256 i = 0; i < playersCount; i++) {
-      if (randomNumber >= players[i].initialBuy && randomNumber <= players[i].endBuy) {
+      if (
+          randomNumber.mod(supplyTickets - players[playersCount].endBuy) >= players[i].initialBuy 
+          && 
+          randomNumber.mod(supplyTickets - players[playersCount].endBuy) <= players[i].endBuy
+        ) {
         /*
           Logic for earning the interest to this
           address and giving the admin 5% of fee.
@@ -574,7 +572,12 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
         IERC20(balanceHolderAddress)
           .transfer(
             players[i].owner, 
-            (players[i].quantityTickets * ticketCost) + getEarnedInterest(getATokenAddress(lendingPool, balanceHolderAddress), balanceToken)
+            (players[i].quantityTickets * ticketCost).mul(1e18)
+            + 
+            getEarnedInterest(
+              getATokenAddress(lendingPool, balanceHolderAddress), 
+              tokenBalance
+            )
           );
 
         emit Winner(players[i].owner, RandomNumberConsumer(randomNumberConsumer).randomResult());
@@ -582,7 +585,7 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
         IERC20(balanceHolderAddress)
           .transfer(
             players[i].owner, 
-            players[i].quantityTickets * ticketCost
+            (players[i].quantityTickets * ticketCost).mul(1e18)
           );
       }
     }
@@ -603,9 +606,9 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
       playersRunningCount = 0;
 
       supplyTickets = supplyTicketsRunning;
-      supplyTicketsRunning = 2**256 - 1;
+      supplyTicketsRunning = ~uint256(0);
     } else {
-      supplyTickets = 2**256 - 1;
+      supplyTickets = ~uint256(0);
     }
 
     statusLottery = LotteryStatus.OPEN;
