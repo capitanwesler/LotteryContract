@@ -262,6 +262,24 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
   }
 
   /**
+    @dev Adding a function, to claim the funds that the person invested in
+    our lottery.
+    @notice This only work if the lottery is still open.
+  **/
+
+  function claimFunds() external {
+    require(statusLottery == LotteryStatus.OPEN, "claimFunds: LOTTERY_NEED_TO_BE_OPEN");
+    for (uint256 i = 0; i < playersCount; i++) {
+      if (players[i].owner == _msgSender()) {
+        IERC20(balanceHolderAddress).transfer(
+          _msgSender(), 
+          (players[i].quantityTickets * ticketCost).mul(1e18)
+        );
+      }
+    }
+  }
+
+  /**
     @dev Withdrawing the funds to the respective token.
     @param _LPAddress Pool to withdraw funds from.
     @param _tokenAddress Token that will be withdrawed address of the underlying asset, not the aToken.
