@@ -160,8 +160,8 @@ describe('Testing: Lottery Contract', async () => {
       200,
       ethers.utils.parseEther('200'),
       USDT,
-      0,
-      2
+      addressIndexes[DAI],
+      addressIndexes[USDT]
     );
 
     const tx = await (await lotteryTest.sendTokensToPool()).wait();
@@ -254,8 +254,8 @@ describe('Testing: Lottery Contract', async () => {
       200,
       ethers.utils.parseEther('200'),
       USDT,
-      0,
-      2
+      addressIndexes[DAI],
+      addressIndexes[USDT]
     );
     const player = await lottery.players(0);
     console.log('Who buyed the tickets: >> ', player.owner);
@@ -275,8 +275,8 @@ describe('Testing: Lottery Contract', async () => {
         1000,
         ethers.utils.parseEther('200'),
         USDT,
-        0,
-        2
+        addressIndexes[DAI],
+        addressIndexes[USDT]
       );
     } catch (error) {
       assert(error);
@@ -329,8 +329,8 @@ describe('Testing: Lottery Contract', async () => {
     await iERC20Dai.approve(lottery.address, ethers.utils.parseEther('200'));
 
     await lottery._swapWithCurve(
-      0,
-      2,
+      addressIndexes[DAI],
+      addressIndexes[USDT],
       ethers.utils.parseEther('200'),
       DAI,
       USDT
