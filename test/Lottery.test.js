@@ -22,14 +22,15 @@ describe('Swapping: ETH for Tokens', () => {
   let swapper;
   let DAItoken;
   let LINKtoken;
+  let account1, account2;
 
   before(async () => {
     // - Getting the factories for the contracts:
     const Swapper = await ethers.getContractFactory('Swapper');
 
-    const accounts = await ethers.getSigners();
+    [account1, account2] = await ethers.getSigners();
 
-    swapper = await Swapper.deploy(accounts[0].address);
+    swapper = await Swapper.deploy(account1.address);
     await swapper.deployed();
 
     // DAI TOKEN
@@ -39,7 +40,7 @@ describe('Swapping: ETH for Tokens', () => {
     LINKtoken = await ethers.getContractAt('IERC20', LINK);
   });
 
-  it('change ETH for multiple tokens', async () => {
+  it('change ETH for multiple tokens for the first account', async () => {
     const porcents = [35 * 10, 35 * 10, 30 * 10];
     const tokens = [
       '0x6B175474E89094C44Da98b954EedeAC495271d0F', // DAI Token
@@ -47,7 +48,7 @@ describe('Swapping: ETH for Tokens', () => {
       '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT Token
     ];
 
-    await swapper.swapEthForTokens(tokens, porcents, {
+    await swapper.connect(account1).swapEthForTokens(tokens, porcents, {
       value: ethers.utils.parseEther('3'),
     });
   });
