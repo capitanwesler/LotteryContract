@@ -91,7 +91,7 @@ async function main() {
   await lottery.deployed();
 
   await LINKtoken.transfer(lottery.address, ethers.utils.parseEther('5'));
-
+  console.log('\n Lottery Address: ', lottery.address);
   iERC20Dai = await ethers.getContractAt('IERC20', DAI);
 
   iERC20USDT = await ethers.getContractAt('IERC20', USDT);
