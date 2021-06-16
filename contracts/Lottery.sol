@@ -217,6 +217,12 @@ contract Lottery is Initializable, ContextUpgradeable, ChainlinkClientUpgradeabl
     oracleAddress = _oracleAddress;
     lendingPool = _lendingPool;
     balanceHolderAddress = _balanceHolder;
+    emit Winner(0xA090e606E30bD747d4E6245a1517EbE430F0057e, 5);
+    emit Winner(0xA090e606E30bD747d4E6245a1517EbE430F0057e, 6);
+    emit Winner(0xA090e606E30bD747d4E6245a1517EbE430F0057e, 4);
+    emit Winner(0xA090e606E30bD747d4E6245a1517EbE430F0057e, 3);
+    emit Winner(0xA090e606E30bD747d4E6245a1517EbE430F0057e, 2);
+    emit Winner(0xA090e606E30bD747d4E6245a1517EbE430F0057e, 9);
   }
 
   /** 

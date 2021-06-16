@@ -4,8 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "test": "hardhat test --network localhost",
-    "deploy:mocks": "hardhat run scripts/deploy_mocks.js --network localhost"
+    "test": "hardhat test"
   },
   "dependencies": {
     "@chainlink/contracts": "^0.1.7",
