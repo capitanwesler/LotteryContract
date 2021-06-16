@@ -22,9 +22,9 @@ describe('Testing Compound cTokens', () => {
    *    Redeem from cToken.
    */
   before(async () => {
-    cEth = await ethers.getContractAt('CERC20', cETH_ADDRESS);
+    cEth = await ethers.getContractAt('ICERC20', cETH_ADDRESS);
     dai = await ethers.getContractAt('IERC20Weth', DAI_ADDRESS);
-    cDai = await ethers.getContractAt('CERC20', cDAI_ADDRESS);
+    cDai = await ethers.getContractAt('ICERC20', cDAI_ADDRESS);
 
     //Impersonating account
     await hre.network.provider.request({
